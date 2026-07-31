@@ -310,6 +310,400 @@ h2#eTitle{
   .tl{padding-top:28px}
 }
 @media(prefers-reduced-motion:reduce){*{transition-duration:.01ms!important}}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   KURS ANTYKU — warstwa dołożona nad powłoką atlasu.
+   Korzysta wyłącznie z tokenów :root zdefiniowanych wyżej.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ---- przełącznik trybów: co widać w KURSIE, a co w ATLASIE ---- */
+svg#map,svg#chronos{position:absolute;inset:0;width:100%;height:100%}
+/* visibility zamiast display — element zachowuje wymiary, więc measure() i
+   ResizeObserver po stronie atlasu działają także wtedy, gdy mapy nie widać. */
+body[data-mode="kurs"]  svg#map,
+body[data-mode="atlas"] svg#chronos{visibility:hidden;pointer-events:none}
+body[data-mode="kurs"]  #atlasPanel,
+body[data-mode="kurs"]  .tl.atlas,
+body[data-mode="kurs"]  .scalebar,
+body[data-mode="kurs"]  .legend,
+body[data-mode="kurs"]  #bFollow,
+body[data-mode="atlas"] #coursePanel,
+body[data-mode="atlas"] #chInfo,
+body[data-mode="atlas"] #hProg,
+body[data-mode="atlas"] #bCards,
+body[data-mode="kurs"]  #hStages,
+body[data-mode="atlas"] .tl.course,
+body[data-mode="atlas"] #bZone,
+body[data-mode="atlas"] .lay-course,
+body[data-mode="kurs"]  .lay-atlas{display:none}
+/* w trybie kursu wielki odczyt roku znika — widoczny przedział podaje nagłówek,
+   a sama oś potrzebuje całej powierzchni sceny */
+body[data-mode="kurs"] .year{display:none}
+body[data-mode="kurs"] #hRange{color:var(--gold);font-variant-numeric:tabular-nums}
+
+/* ---- interakcja na osi ---- */
+svg#chronos{touch-action:none;cursor:grab}
+svg#chronos.drag{cursor:grabbing}
+svg#chronos text{user-select:none}
+.kev,.kmy,.kpar{cursor:pointer}
+.kev .ksym,.kev .klab,.kev .kyr,.kev .kstem{transition:opacity .16s,fill .16s}
+.kev:hover .klab,.kev:focus-visible .klab{fill:var(--gold-hi);opacity:1}
+.kev:hover .kstem,.kev:focus-visible .kstem{opacity:.95}
+.kev:hover .ksym,.kev:focus-visible .ksym{opacity:1}
+.kev:focus{outline:none}
+.kmy circle,.klife rect{transition:opacity .16s}
+.kmy:hover circle,.klife:hover rect{opacity:1}
+.kmy:hover text{fill:var(--gold-hi)}
+
+#chInfo{
+  position:absolute;right:12px;bottom:92px;z-index:7;width:min(410px,calc(100% - var(--pad)*2));
+  padding:14px 16px 15px;border:1px solid var(--line);border-left:2px solid var(--gold);
+  border-radius:12px;background:rgba(9,14,20,.93);backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);box-shadow:0 22px 55px rgba(0,0,0,.65);
+  opacity:0;transform:translateY(8px);pointer-events:none;transition:opacity .18s,transform .18s;
+}
+#chInfo.on{opacity:1;transform:none;pointer-events:auto}
+#chInfo .kx{position:absolute;right:8px;top:7px;width:24px;height:24px;border:0;background:none;
+  color:var(--mute);font-size:16px;line-height:1;border-radius:6px}
+#chInfo .kx:hover{color:var(--gold-hi);background:rgba(255,255,255,.05)}
+#chInfo .t{font-family:var(--disp);font-size:16px;font-weight:600;letter-spacing:.05em;
+  color:var(--gold-hi);padding-right:22px}
+#chInfo .y{font-family:var(--sans);font-size:10px;font-weight:600;letter-spacing:.15em;
+  text-transform:uppercase;color:var(--bronze);margin-top:5px}
+#chInfo .d{font-size:15px;line-height:1.55;color:#ded4bf;margin-top:9px}
+
+.hbtn.mode{border-color:var(--gold-dim);color:var(--gold-hi);background:rgba(224,180,95,.09)}
+.hbtn.mode:hover{background:rgba(224,180,95,.17)}
+header .prog{display:flex;align-items:center;gap:8px;font-family:var(--sans);font-size:10px;
+  letter-spacing:.14em;text-transform:uppercase;color:var(--mute)}
+header .prog b{color:var(--gold);font-weight:600;font-variant-numeric:tabular-nums}
+header .prog .bar{width:62px;height:3px;border-radius:2px;background:rgba(226,209,171,.15);overflow:hidden}
+header .prog .bar i{display:block;height:100%;width:0;border-radius:2px;
+  background:linear-gradient(90deg,var(--gold-dim),var(--gold-hi));transition:width .45s ease}
+
+/* ---- oś kursu (dolny pas w trybie KURS) ---- */
+.tl.course .tk{width:15px}
+.tl.course .tk::after{width:6px;height:6px}
+.tl.course .tk.big::after{width:8px;height:8px;border:1px solid rgba(226,209,171,.5)}
+.tl.course .tk.pass::after{background:var(--gold);box-shadow:0 0 9px rgba(224,180,95,.55)}
+
+/* ══════════════════ PANEL KURSU ══════════════════ */
+#coursePanel .pad{padding-bottom:6px}
+.chip.k-w{color:#a9c7dd;border-color:rgba(140,180,210,.35);background:rgba(140,180,210,.09)}
+.chip.k-l{color:#f2c98a;border-color:rgba(230,170,80,.38);background:rgba(230,170,80,.1)}
+.chip.k-h{color:#ffb9a0;border-color:rgba(255,140,110,.4);background:rgba(255,120,90,.1)}
+.chip.k-p{color:#e2aec6;border-color:rgba(178,85,120,.45);background:rgba(178,85,120,.13)}
+.chip.k-y{color:#ffd894;border-color:rgba(224,180,95,.45);background:rgba(224,180,95,.12)}
+.chip.k-t{color:#b9b1a1;border-color:rgba(226,209,171,.25);background:rgba(226,209,171,.06)}
+.crumb .mins{margin-left:auto;font-family:var(--sans);font-size:10.5px;letter-spacing:.1em;
+  color:var(--bronze);font-variant-numeric:tabular-nums}
+
+#mLead{font-size:17.5px;line-height:1.62;margin:0;color:#ded4bf}
+#mLead::first-letter{font-family:var(--disp);font-size:2.55em;line-height:.85;float:left;
+  padding:5px 9px 0 0;color:var(--gold);font-weight:600}
+#mLead p{margin:0 0 .85em}
+#mLead p:last-child{margin-bottom:0}
+#mLead em{color:var(--gold-hi);font-style:italic}
+#mLead b{color:var(--paper);font-weight:600}
+
+/* zwijane sekcje modułu */
+.acc{border-top:1px solid var(--line)}
+.acc > summary{
+  padding:14px var(--pad);cursor:pointer;list-style:none;display:flex;align-items:center;gap:10px;
+  font-family:var(--sans);font-size:10px;font-weight:600;letter-spacing:.17em;text-transform:uppercase;
+  color:var(--bronze);transition:.16s;
+}
+.acc > summary::-webkit-details-marker{display:none}
+.acc > summary:hover{color:var(--gold-hi);background:rgba(255,255,255,.025)}
+.acc > summary .arw{width:9px;height:9px;flex:0 0 auto;border-right:1.5px solid currentColor;
+  border-bottom:1.5px solid currentColor;transform:rotate(-45deg);transition:transform .2s;margin-left:-2px}
+.acc[open] > summary .arw{transform:rotate(45deg)}
+.acc > summary .tag{margin-left:auto;font-size:9px;letter-spacing:.1em;color:var(--mute2);
+  font-variant-numeric:tabular-nums}
+.acc > summary .tag.ok{color:var(--gold)}
+.acc .bd{padding:0 var(--pad) var(--pad)}
+
+/* dzieła i autorzy */
+.works{display:flex;flex-direction:column;gap:2px}
+.work{display:flex;gap:11px;align-items:baseline;padding:7px 10px;border-radius:8px;transition:.14s}
+.work:hover{background:rgba(255,255,255,.035)}
+.work .au{flex:0 0 33%;font-size:14.5px;color:var(--gold-hi);line-height:1.35}
+.work .ti{flex:1;font-size:14.5px;color:var(--paper2);line-height:1.35}
+.work .ti i{color:var(--mute);font-style:italic}
+
+/* pojęcia — żetony */
+.terms{display:flex;flex-wrap:wrap;gap:6px}
+.term{border:1px solid var(--line);background:transparent;color:var(--paper2);border-radius:999px;
+  padding:6px 12px;font-family:var(--serif);font-size:14px;transition:.16s;text-align:left}
+.term:hover{border-color:var(--gold-dim);color:var(--gold-hi)}
+.term.seen{border-color:rgba(224,180,95,.3);color:var(--gold)}
+.termdef{margin-top:12px;padding:13px 15px;border-radius:10px;border:1px solid var(--line);
+  border-left:2px solid var(--gold);background:rgba(224,180,95,.06);display:none}
+.termdef.on{display:block}
+.termdef .t{font-family:var(--disp);font-size:15px;font-weight:600;letter-spacing:.04em;color:var(--gold-hi)}
+.termdef .d{font-size:15px;line-height:1.55;color:#ded4bf;margin-top:5px}
+
+/* ══════════════════ ĆWICZENIA ══════════════════ */
+.ex{font-size:15.5px;line-height:1.6;color:#d8cfba}
+.ex .q{font-size:15.5px;line-height:1.55;color:var(--paper);margin:0 0 12px}
+.ex .hint{font-family:var(--sans);font-size:11.5px;line-height:1.6;color:var(--mute);margin:10px 0 14px}
+.ex .src{font-family:var(--sans);font-size:10.5px;line-height:1.6;color:var(--mute2);margin-top:12px}
+
+.btn{border:1px solid var(--line);background:rgba(255,255,255,.02);color:var(--paper2);
+  border-radius:9px;padding:9px 15px;font-family:var(--sans);font-size:11px;font-weight:600;
+  letter-spacing:.1em;text-transform:uppercase;transition:.16s}
+.btn:hover{border-color:var(--gold-dim);color:var(--gold-hi)}
+.btn.gold{background:var(--gold);border-color:var(--gold);color:#150e04}
+.btn.gold:hover{background:var(--gold-hi);color:#150e04}
+.btn:disabled{opacity:.4;cursor:default}
+.btnrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:14px}
+.btnrow .sp{margin-left:auto;font-family:var(--sans);font-size:11px;letter-spacing:.08em;color:var(--mute)}
+
+/* wybór jednokrotny / wielokrotny */
+.opts{display:flex;flex-direction:column;gap:7px}
+.opt{display:flex;gap:11px;align-items:flex-start;text-align:left;width:100%;
+  border:1px solid var(--line);background:rgba(255,255,255,.015);color:var(--paper2);
+  border-radius:10px;padding:11px 13px;font-family:var(--serif);font-size:15px;line-height:1.45;transition:.16s}
+.opt:hover:not(:disabled){border-color:var(--gold-dim);color:var(--paper)}
+.opt .k{flex:0 0 auto;width:20px;height:20px;border-radius:6px;border:1px solid var(--bronze);
+  display:grid;place-items:center;font-family:var(--sans);font-size:10px;font-weight:700;
+  color:var(--bronze);margin-top:1px}
+.opt.pick{border-color:var(--gold);background:rgba(224,180,95,.1)}
+.opt.pick .k{background:var(--gold);border-color:var(--gold);color:#150e04}
+.opt.good{border-color:#7ec9a0;background:rgba(126,201,160,.12)}
+.opt.good .k{background:#7ec9a0;border-color:#7ec9a0;color:#0a1a12}
+.opt.bad{border-color:#d9707f;background:rgba(217,112,127,.12)}
+.opt.bad .k{background:#d9707f;border-color:#d9707f;color:#1a0a0d}
+.opt:disabled{cursor:default}
+
+.fb{margin-top:12px;padding:12px 14px;border-radius:10px;font-size:15px;line-height:1.55;display:none}
+.fb.on{display:block}
+.fb.good{border:1px solid rgba(126,201,160,.3);background:rgba(126,201,160,.08);color:#c7e8d6}
+.fb.bad{border:1px solid rgba(217,112,127,.3);background:rgba(217,112,127,.08);color:#f0cdd2}
+.fb b{color:var(--paper);font-weight:600}
+
+/* sortowanie do koszy */
+.pool{display:flex;flex-wrap:wrap;gap:7px;min-height:44px;padding:10px;border-radius:10px;
+  border:1px dashed var(--line);background:rgba(255,255,255,.012);margin-bottom:12px}
+.pool:empty::after{content:"— wszystko rozdzielone —";font-family:var(--sans);font-size:11px;
+  letter-spacing:.1em;color:var(--mute2)}
+.tok{border:1px solid var(--line);background:rgba(15,23,32,.7);color:var(--paper2);border-radius:8px;
+  padding:7px 11px;font-family:var(--serif);font-size:14.5px;transition:.16s;text-align:left}
+.tok:hover{border-color:var(--gold-dim);color:var(--gold-hi)}
+.tok.sel{border-color:var(--gold);background:rgba(224,180,95,.14);color:var(--gold-hi)}
+.tok.good{border-color:#7ec9a0;color:#c7e8d6}
+.tok.bad{border-color:#d9707f;color:#f0cdd2}
+.bins{display:grid;gap:9px}
+.bin{border:1px solid var(--line);border-radius:11px;padding:11px 12px;background:rgba(255,255,255,.015);
+  transition:.16s;cursor:pointer}
+.bin:hover,.bin.hot{border-color:var(--gold-dim);background:rgba(224,180,95,.06)}
+.bin > .h{font-family:var(--sans);font-size:9.5px;font-weight:700;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--bronze);margin-bottom:9px;display:flex;gap:8px;align-items:center}
+.bin > .h .n{margin-left:auto;color:var(--mute2);font-variant-numeric:tabular-nums}
+.bin .drop{display:flex;flex-wrap:wrap;gap:6px;min-height:30px}
+.bin .drop:empty::after{content:"kliknij, by tu wrzucić";font-family:var(--sans);font-size:10.5px;
+  letter-spacing:.06em;color:var(--mute2)}
+
+/* układanie w kolejności */
+.seq{display:flex;flex-direction:column;gap:5px}
+.seqrow{display:flex;gap:10px;align-items:center;border:1px solid var(--line);border-radius:9px;
+  padding:8px 11px;background:rgba(255,255,255,.015);cursor:grab;transition:.16s}
+.seqrow:hover{border-color:var(--gold-dim)}
+.seqrow.drag{opacity:.45;cursor:grabbing}
+.seqrow.over{border-color:var(--gold);background:rgba(224,180,95,.1)}
+.seqrow .gr{color:var(--mute2);letter-spacing:1px;font-size:12px;flex:0 0 auto}
+.seqrow .nm{flex:1;font-size:14.5px;color:var(--paper2)}
+.seqrow .yr{font-family:var(--sans);font-size:10px;color:var(--mute2);font-variant-numeric:tabular-nums;
+  opacity:0;transition:.2s}
+.seqrow.rev .yr{opacity:1}
+.seqrow.ok{border-color:rgba(126,201,160,.5)}
+.seqrow.no{border-color:rgba(217,112,127,.5)}
+.seqrow .mv{display:flex;flex-direction:column;gap:2px}
+.seqrow .mv button{width:20px;height:15px;border:0;background:none;color:var(--mute2);padding:0;
+  display:grid;place-items:center;line-height:1}
+.seqrow .mv button:hover{color:var(--gold-hi)}
+
+/* dopasowanie w parach */
+.match{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.match .col{display:flex;flex-direction:column;gap:6px}
+.match .col > .h{font-family:var(--sans);font-size:9.5px;font-weight:700;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--bronze);margin-bottom:2px}
+.mi{border:1px solid var(--line);background:rgba(255,255,255,.015);color:var(--paper2);border-radius:9px;
+  padding:9px 11px;font-family:var(--serif);font-size:14px;line-height:1.4;text-align:left;transition:.16s}
+.mi:hover:not(:disabled){border-color:var(--gold-dim)}
+.mi.sel{border-color:var(--gold);background:rgba(224,180,95,.13);color:var(--gold-hi)}
+.mi.done{border-color:rgba(126,201,160,.45);color:#bfe0cd;background:rgba(126,201,160,.07)}
+.mi.done .pair{float:right;font-family:var(--sans);font-size:9px;letter-spacing:.1em;color:#7ec9a0}
+.mi.miss{animation:shk .3s}
+@keyframes shk{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+
+/* tekst źródłowy z adnotacjami */
+.txt{font-size:16.5px;line-height:1.78;color:#ded4bf;padding:15px 17px;border-radius:11px;
+  border:1px solid var(--line);background:rgba(255,255,255,.018)}
+.txt .v{display:block;position:relative;padding-left:2px}
+.txt .an{border-bottom:1px dashed var(--gold-dim);cursor:pointer;transition:.15s;color:#efe4cc}
+.txt .an:hover{background:rgba(224,180,95,.16);border-bottom-color:var(--gold-hi)}
+.txt .an.on{background:rgba(224,180,95,.24);color:var(--gold-hi);border-bottom-color:var(--gold-hi)}
+.txt .ln{font-family:var(--sans);font-size:9px;color:var(--mute2);position:absolute;left:-28px;top:.45em}
+.anbox{margin-top:12px;padding:13px 15px;border-radius:10px;border:1px solid var(--line);
+  border-left:2px solid var(--gold);background:rgba(224,180,95,.06);min-height:52px}
+.anbox .t{font-family:var(--sans);font-size:9.5px;font-weight:700;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--gold)}
+.anbox .d{font-size:15px;line-height:1.55;color:#ded4bf;margin-top:6px}
+.anbox .e{font-family:var(--sans);font-size:11.5px;line-height:1.6;color:var(--mute);margin-top:8px}
+
+/* dwie kolumny do porównania */
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.cmp .c{border:1px solid var(--line);border-radius:11px;padding:12px 13px;background:rgba(255,255,255,.015)}
+.cmp .c > .h{font-family:var(--disp);font-size:15px;font-weight:600;letter-spacing:.06em;
+  color:var(--gold-hi);margin-bottom:9px}
+.cmp .c ul{margin:0;padding-left:17px}
+.cmp .c li{font-size:14.5px;line-height:1.5;color:var(--paper2);margin-bottom:5px}
+.cmp .c li::marker{color:var(--bronze)}
+
+/* diagram klikalny (teatr, ustrój) */
+.diag{width:100%;height:auto;display:block;border-radius:11px;border:1px solid var(--line);
+  background:rgba(255,255,255,.015)}
+.diag .z{cursor:pointer;transition:.16s}
+.diag .z:hover .sh{fill:rgba(224,180,95,.22);stroke:var(--gold-hi)}
+.diag .z.on .sh{fill:rgba(224,180,95,.3);stroke:var(--gold-hi)}
+.diag .sh{fill:rgba(226,209,171,.05);stroke:var(--bronze);stroke-width:1.2;transition:.16s}
+.diag text,.diag .deco{pointer-events:none}
+.diag text{font-family:var(--sans);font-size:9px;letter-spacing:.1em;fill:var(--paper2);
+  text-transform:uppercase}
+.diag .lbl{font-family:var(--disp);font-size:11px;letter-spacing:.08em;fill:var(--gold);text-transform:none}
+
+/* rytm heksametru */
+.beat{display:flex;flex-wrap:wrap;gap:4px;margin:12px 0}
+.beat span{width:22px;height:26px;border-radius:5px;border:1px solid var(--line);display:grid;
+  place-items:center;font-family:var(--sans);font-size:13px;color:var(--mute2);transition:.12s}
+.beat span.l{background:rgba(224,180,95,.12);border-color:var(--gold-dim);color:var(--gold-hi)}
+.beat span.s{background:rgba(255,255,255,.03)}
+.beat span.hit{transform:scale(1.22);border-color:var(--gold-hi);color:var(--gold-hi);
+  box-shadow:0 0 12px rgba(224,180,95,.4)}
+.beat .brk{width:2px;height:26px;background:var(--line);border:0;border-radius:0}
+
+/* suwak / pole tekstowe */
+.field{width:100%;border:1px solid var(--line);background:rgba(255,255,255,.02);color:var(--paper);
+  border-radius:10px;padding:11px 13px;font-family:var(--serif);font-size:15.5px;line-height:1.55;
+  resize:vertical;transition:.16s}
+.field:focus{outline:none;border-color:var(--gold-dim);background:rgba(255,255,255,.035)}
+.field::placeholder{color:var(--mute2)}
+.num{width:110px;font-variant-numeric:tabular-nums;font-family:var(--sans);font-size:14px}
+.calc{display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.calc label{font-family:var(--sans);font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--mute)}
+.calcout{padding:13px 15px;border-radius:10px;border:1px solid var(--line);border-left:2px solid var(--gold);
+  background:rgba(224,180,95,.06);font-size:15.5px;line-height:1.6;color:#ded4bf}
+.calcout b{color:var(--gold-hi);font-weight:600;font-variant-numeric:tabular-nums}
+
+/* ══════════════════ FISZKI ══════════════════ */
+.modal{position:fixed;inset:0;z-index:1000;background:rgba(4,7,10,.82);backdrop-filter:blur(7px);
+  -webkit-backdrop-filter:blur(7px);display:none;place-items:center;padding:20px}
+.modal.on{display:grid}
+.modal .box{width:min(620px,100%);max-height:88vh;overflow-y:auto;border:1px solid var(--line);
+  border-radius:16px;background:linear-gradient(180deg,#0e151d,#0a1016);
+  box-shadow:0 30px 90px rgba(0,0,0,.75);scrollbar-width:thin}
+.modal .hd{display:flex;align-items:center;gap:12px;padding:16px var(--pad);
+  border-bottom:1px solid var(--line);position:sticky;top:0;z-index:2;
+  background:linear-gradient(180deg,#0e151d,#0d141b)}
+.modal .hd h3{font-family:var(--disp);font-size:15px;font-weight:600;letter-spacing:.13em;margin:0;
+  color:var(--paper)}
+.modal .hd .x{margin-left:auto;width:32px;height:32px;border-radius:8px;border:1px solid var(--line);
+  background:none;color:var(--paper2);display:grid;place-items:center;font-size:17px;line-height:1}
+.modal .hd .x:hover{border-color:var(--gold-dim);color:var(--gold-hi)}
+.modal .bd{padding:var(--pad)}
+
+.card{border:1px solid var(--line);border-radius:14px;padding:30px 24px;min-height:210px;
+  display:grid;place-items:center;text-align:center;background:rgba(255,255,255,.02);cursor:pointer;
+  transition:.2s}
+.card:hover{border-color:var(--gold-dim)}
+.card .front{font-family:var(--disp);font-size:clamp(20px,3.4vw,27px);font-weight:600;
+  letter-spacing:.05em;color:var(--gold-hi)}
+.card .back{font-size:16.5px;line-height:1.6;color:#ded4bf;margin-top:14px;display:none}
+.card.flip .back{display:block}
+.card .tap{font-family:var(--sans);font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--mute2);margin-top:16px}
+.card.flip .tap{display:none}
+.boxes{display:flex;gap:8px;margin-top:14px}
+.boxes .b{flex:1;border:1px solid var(--line);border-radius:9px;padding:9px;text-align:center;
+  font-family:var(--sans);font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--mute2)}
+.boxes .b b{display:block;font-size:17px;color:var(--gold);margin-bottom:3px;
+  font-variant-numeric:tabular-nums;letter-spacing:0}
+.boxes .b.on{border-color:var(--gold-dim);background:rgba(224,180,95,.07)}
+
+/* pałac pamięci */
+.palace{display:flex;flex-direction:column;gap:8px}
+.room{display:flex;gap:11px;align-items:flex-start;border:1px solid var(--line);border-radius:11px;
+  padding:11px 13px;background:rgba(255,255,255,.015)}
+.room .n{flex:0 0 34px;height:34px;border-radius:9px;border:1px solid var(--bronze);display:grid;
+  place-items:center;font-family:var(--disp);font-size:13px;font-weight:600;color:var(--gold)}
+.room .bd{flex:1;min-width:0}
+.room .ti{font-family:var(--disp);font-size:14.5px;font-weight:600;letter-spacing:.04em;
+  color:var(--paper);margin-bottom:3px}
+.room .cue{font-family:var(--sans);font-size:11.5px;line-height:1.55;color:var(--mute);margin-bottom:8px}
+.room .field{font-size:14.5px;padding:8px 11px}
+.room.filled{border-color:rgba(224,180,95,.32)}
+.room.filled .n{background:rgba(224,180,95,.14);color:var(--gold-hi)}
+
+/* harmonogram powtórek */
+.sched{display:flex;flex-direction:column;gap:6px}
+.day{display:flex;gap:12px;align-items:baseline;padding:10px 12px;border-radius:9px;
+  border:1px solid var(--line);background:rgba(255,255,255,.015)}
+.day .d{flex:0 0 52px;font-family:var(--disp);font-size:14px;font-weight:600;color:var(--gold)}
+.day .w{flex:1;font-size:14.5px;line-height:1.5;color:var(--paper2)}
+.day .m{font-family:var(--sans);font-size:10px;letter-spacing:.09em;color:var(--mute2);white-space:nowrap}
+
+/* wynik końcowy */
+.score{text-align:center;padding:22px 0 6px}
+.score .n{font-family:var(--disp);font-size:52px;font-weight:600;color:var(--gold-hi);line-height:1;
+  font-variant-numeric:tabular-nums}
+.score .l{font-family:var(--sans);font-size:10px;letter-spacing:.19em;text-transform:uppercase;
+  color:var(--mute);margin-top:10px}
+.score .d{font-size:15.5px;line-height:1.6;color:#ded4bf;margin-top:14px;text-align:left}
+
+/* ══════════════════ WYDRUK ══════════════════ */
+@media print{
+  body::before,header,.stage,.rail,.layers,.tl,.modal,#tip,.btn,.btnrow{display:none!important}
+  html,body{height:auto;overflow:visible;background:#fff;color:#111;display:block}
+  body{font-size:11pt}
+  .app{display:block}
+  .panel{border:0;overflow:visible;background:#fff}
+  #coursePanel,#printAll{display:block!important}
+  .acc{border-color:#ccc}
+  .acc > summary{color:#555}
+  .acc .bd{display:block!important}
+  h2#mTitle,#mTitle{color:#111}
+  #mLead,.work .ti,.opt,.txt{color:#111}
+  .work .au,.termdef .t,.day .d,.room .ti{color:#7a5a12}
+  .txt,.opt,.room,.day,.bin{border-color:#ccc;background:#fff}
+  a{color:#111;text-decoration:underline}
+}
+#printAll{display:none}
+
+/* ══════════════════ MOBILE ══════════════════ */
+@media(max-width:960px){
+  body[data-mode="kurs"] .stage{height:min(46vh,400px)}
+  .match,.cmp{grid-template-columns:1fr}
+  .modal{padding:0}
+  .modal .box{max-height:100vh;height:100%;border-radius:0;border:0}
+  /* nagłówek na wąskim ekranie: same ikony, bez podpisów — inaczej się nie mieści */
+  .hbtn .lbl{display:none}
+  .hbtn{padding:0 10px}
+  header .yrs{gap:8px}
+  header .prog .bar{width:44px}
+  header .prog{font-size:9.5px;letter-spacing:.08em}
+  header h1{font-size:11px;letter-spacing:.08em}
+  #chInfo{right:auto;left:var(--pad);bottom:88px;width:calc(100% - var(--pad)*2)}
+}
+@media(max-width:560px){
+  header .prog{display:none}
+  #hRange{display:none}
+}
+@media(max-width:420px){
+  .work{flex-direction:column;gap:2px}
+  .work .au{flex:none}
+}
 </style>
 </head>
 <body>
@@ -319,14 +713,28 @@ h2#eTitle{
     <path d="M12 1.6l2.9 6.1 6.7.9-4.9 4.6 1.2 6.6L12 16.7 6.1 19.8l1.2-6.6L2.4 8.6l6.7-.9z"
           fill="currentColor" opacity=".9"/>
   </svg>
-  <h1>Podboje <em>Aleksandra Wielkiego</em></h1>
+  <h1 id="hTitle">Antyk &mdash; <em>kurs interaktywny</em></h1>
   <div class="yrs">
-    <span class="mono">336–323 p.n.e.</span>
+    <span class="mono" id="hRange">3200 p.n.e. &ndash; 476 n.e.</span>
     <span id="hStages">34 etapy · 20 900 km</span>
+    <div class="prog" id="hProg" title="Ukończone moduły">
+      <div class="bar"><i id="hProgBar"></i></div>
+      <b id="hProgN">0 / 16</b>
+    </div>
+    <button class="hbtn" id="bCards" title="Fiszki z pojęciami">
+      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.7"
+           stroke-linejoin="round"><rect x="3" y="6" width="14" height="12" rx="2"/><path d="M8 3h11a2 2 0 012 2v11"/></svg>
+      <span class="lbl">Fiszki</span>
+    </button>
     <button class="hbtn" id="bLayers" aria-expanded="false" aria-controls="layers">
       <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.7"
            stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></svg>
-      Warstwy
+      <span class="lbl">Warstwy</span>
+    </button>
+    <button class="hbtn mode" id="bMode" title="Przełącz tryb">
+      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.7"
+           stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13l-3-3M20 16H7l3 3"/></svg>
+      <span id="bModeT">Atlas</span>
     </button>
   </div>
 </header>
@@ -334,6 +742,14 @@ h2#eTitle{
 <div class="app">
   <div class="stage" id="stage">
     <svg id="map" xmlns="http://www.w3.org/2000/svg" aria-label="Mapa wyprawy Aleksandra Wielkiego"></svg>
+    <svg id="chronos" xmlns="http://www.w3.org/2000/svg" aria-label="Wielka oś antyku — czas mityczny i historyczny"></svg>
+
+    <div id="chInfo" role="status" aria-live="polite">
+      <button class="kx" aria-label="Zamknij">&times;</button>
+      <div class="t"></div>
+      <div class="y mono"></div>
+      <div class="d"></div>
+    </div>
 
     <div class="year">
       <div class="n mono" id="yrN">336</div>
@@ -357,14 +773,27 @@ h2#eTitle{
         <svg viewBox="0 0 24 24"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5"/></svg></button>
     </div>
 
-    <div class="layers" id="layers" role="group" aria-label="Warstwy mapy">
-      <h4>Warstwy mapy</h4>
-      <label><input type="checkbox" id="lRelief" checked> Rzeźba terenu</label>
-      <label><input type="checkbox" id="lEmpire" checked> Imperium perskie (334)</label>
-      <label><input type="checkbox" id="lAnc" checked> Krainy starożytne</label>
-      <label><input type="checkbox" id="lMod" checked> Dzisiejsze państwa</label>
-      <label><input type="checkbox" id="lRiv" checked> Rzeki i jeziora</label>
-      <label><input type="checkbox" id="lGrat"> Siatka geograficzna</label>
+    <div class="layers" id="layers" role="group" aria-label="Warstwy">
+      <div class="lay-course">
+        <h4>Pasma osi czasu</h4>
+        <label><input type="checkbox" id="cMyth" checked> Czas mityczny</label>
+        <label><input type="checkbox" id="cNear" checked> Bliski Wschód i Izrael</label>
+        <label><input type="checkbox" id="cGrec" checked> Grecja</label>
+        <label><input type="checkbox" id="cRoma" checked> Rzym</label>
+        <label><input type="checkbox" id="cChri" checked> Chrześcijaństwo</label>
+        <label><input type="checkbox" id="cWork" checked> Dzieła i autorzy</label>
+        <label><input type="checkbox" id="cPara"> Nakładka: paradoks</label>
+      </div>
+      <div class="lay-atlas">
+        <h4>Warstwy mapy</h4>
+        <label><input type="checkbox" id="lRelief" checked> Rzeźba terenu</label>
+        <label><input type="checkbox" id="lEmpire" checked> Imperium perskie (334)</label>
+        <label><input type="checkbox" id="lAnc" checked> Krainy starożytne</label>
+        <label><input type="checkbox" id="lMod" checked> Dzisiejsze państwa</label>
+        <label><input type="checkbox" id="lRiv" checked> Rzeki i jeziora</label>
+        <label><input type="checkbox" id="lGrat"> Siatka geograficzna</label>
+        <label><input type="checkbox" id="lPlaces"> Miejsca z kursu</label>
+      </div>
     </div>
 
     <div class="scalebar" id="scalebar">
@@ -378,7 +807,7 @@ h2#eTitle{
       <div><i style="border-color:#b25578;border-top-style:dashed"></i> imperium perskie 334 p.n.e.</div>
     </div>
 
-    <div class="tl">
+    <div class="tl atlas">
       <div class="row">
         <button class="tbtn" id="bPrev" title="Poprzedni etap" aria-label="Poprzedni etap">
           <svg viewBox="0 0 24 24"><path d="M17 4L7 12l10 8z"/><rect x="5" y="4" width="2" height="16" rx="1"/></svg></button>
@@ -395,9 +824,26 @@ h2#eTitle{
         <button class="tbtn spd" id="bSpeed" title="Prędkość">1&times;</button>
       </div>
     </div>
+    <div class="tl course">
+      <div class="row">
+        <button class="tbtn" id="cPrev" title="Poprzedni moduł" aria-label="Poprzedni moduł">
+          <svg viewBox="0 0 24 24"><path d="M17 4L7 12l10 8z"/><rect x="5" y="4" width="2" height="16" rx="1"/></svg></button>
+        <button class="tbtn play" id="cDone" title="Zalicz moduł i przejdź dalej" aria-label="Zalicz moduł i przejdź dalej">
+          <svg id="icDone" viewBox="0 0 24 24"><path d="M20.3 6.4l-9.9 9.9-4.7-4.7-1.8 1.8 6.5 6.5 11.7-11.7z"/></svg></button>
+        <button class="tbtn" id="cNext" title="Następny moduł" aria-label="Następny moduł">
+          <svg viewBox="0 0 24 24"><path d="M7 4l10 8-10 8z"/><rect x="17" y="4" width="2" height="16" rx="1"/></svg></button>
+        <div class="track" id="cTrack">
+          <div class="line"><i id="cProg"></i></div>
+          <div class="ticks" id="cTicks"></div>
+          <div class="yrs" id="cLabels"></div>
+          <input type="range" id="cScrub" min="0" max="15" step="1" value="0" aria-label="Moduł kursu">
+        </div>
+      </div>
+    </div>
   </div>
 
   <aside class="panel" id="panel">
+  <div id="atlasPanel">
     <div class="pad">
       <div class="crumb">
         <span class="chip k-c" id="eKind">Miasto</span>
@@ -446,6 +892,82 @@ h2#eTitle{
       Sterowanie: <b>&larr; &rarr;</b> etapy &middot; <b>spacja</b> odtwarzanie &middot;
       kółko myszy / szczypanie &mdash; zoom &middot; przeciąganie &mdash; przesuwanie mapy.
     </div>
+  </div>
+  <div id="coursePanel">
+    <div class="pad">
+      <div class="crumb">
+        <span class="chip k-w" id="mKind">Wstęp</span>
+        <span class="idx" id="mIdx">Moduł 00 / 15</span>
+        <span class="mins mono" id="mMins">~10 min</span>
+      </div>
+      <h2 id="mTitle">Diagnoza</h2>
+      <div class="when mono" id="mWhen"></div>
+      <div class="rule"></div>
+      <div id="mLead"></div>
+      <div class="meta">
+        <svg viewBox="0 0 24 24"><path d="M3 12h18M6 9v6M12 7v10M18 9v6"/></svg>
+        <div class="t" id="mAxis"></div>
+      </div>
+    </div>
+
+    <details class="acc" id="aWorks">
+      <summary><i class="arw"></i>Dzieła i autorzy<span class="tag" id="tWorks"></span></summary>
+      <div class="bd"><div class="works" id="mWorks"></div></div>
+    </details>
+
+    <details class="acc" id="aTerms">
+      <summary><i class="arw"></i>Pojęcia<span class="tag" id="tTerms"></span></summary>
+      <div class="bd">
+        <div class="terms" id="mTerms"></div>
+        <div class="termdef" id="mDef"></div>
+      </div>
+    </details>
+
+    <details class="acc" id="aEx" open>
+      <summary><i class="arw"></i>Ćwiczenie<span class="tag" id="tEx"></span></summary>
+      <div class="bd" id="mEx"></div>
+    </details>
+
+    <details class="acc" id="aQuiz">
+      <summary><i class="arw"></i>Sprawdź się<span class="tag" id="tQuiz"></span></summary>
+      <div class="bd" id="mQuiz"></div>
+    </details>
+
+    <details class="acc" id="aNote">
+      <summary><i class="arw"></i>Twój wkład<span class="tag" id="tNote"></span></summary>
+      <div class="bd">
+        <p class="ex hint" id="mPrompt"></p>
+        <textarea class="field" id="mNoteF" rows="4" placeholder="Własny przykład, analogia, skojarzenie do zapamiętania…"></textarea>
+        <div class="btnrow">
+          <button class="btn" id="bExport">Eksportuj notatki</button>
+          <button class="btn" id="bPrint">Drukuj kurs</button>
+        </div>
+      </div>
+    </details>
+
+    <div class="sect">
+      <span class="sc">Wszystkie moduły</span>
+      <div class="rows" id="mRows"></div>
+    </div>
+
+    <div class="note">
+      Kurs powstał na bazie programu antyku w zakresie rozszerzonym: trzynaście rozdziałów, oś czasu
+      w dwóch warstwach &mdash; mitycznej i historycznej &mdash; oraz rozbiór paradoksu chronologicznego
+      wokół <i>Eneidy</i>. Datowanie wydarzeń mitycznych jest umowne i podane za tradycją antyczną
+      (m.in. wyliczenie Eratostenesa dla upadku Troi); pasmo mityczne rysowane jest dlatego bez skali.
+      Odstępy między latami liczone są bez roku zerowego: między 19&nbsp;p.n.e. a 64&nbsp;n.e. mijają
+      82&nbsp;lata, nie 83.
+    </div>
+    <div class="foot">
+      Cytaty z przekładów w domenie publicznej: <i>Iliada</i> w tłum. Franciszka Ksawerego Dmochowskiego,
+      <i>Odyseja</i> w tłum. Lucjana Siemieńskiego, Biblia w tłum. Jakuba Wujka, <i>Eneida</i> w tłum.
+      Tadeusza Karyłowskiego. Utwory autorów XX-wiecznych omawiane, a cytowane wyłącznie we fragmentach
+      w ramach prawa cytatu, z podaniem autora i tytułu.
+      <br><br>
+      Sterowanie: <b>&larr; &rarr;</b> moduły &middot; <b>spacja</b> zalicz i dalej &middot;
+      <b>F</b> fiszki &middot; <b>M</b> przełącz tryb &middot; kółko myszy / szczypanie &mdash; zoom osi.
+    </div>
+  </div>
   </aside>
 </div>
 
@@ -1080,6 +1602,2271 @@ goTo(0,false); paintMarks(); declutter(); thinYears();
 requestAnimationFrame(loop);
 setTimeout(()=>{st.follow=true;el('bFollow').setAttribute('aria-pressed','true');
   focus(donePath.getPointAtLength(0),narrow()?300:360)},900);
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   WIELKA OŚ ANTYKU — dane
+   Wszystkie nazwy prefiksowane K_ / k…, żeby nie kolidować z kodem atlasu,
+   który działa w tym samym zasięgu skryptu.
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+const K_W=3000, K_H=1760;
+
+/* Rok osi: nie ma roku zerowego, więc 1 p.n.e. = -1, a 1 n.e. = 0.
+   Dzięki temu kAx(64)-kAx(-19) = 82, a nie 83.                                */
+const kAx=y=>y<0?y:y-1;
+const kSpan=(a,b)=>Math.abs(kAx(b)-kAx(a));
+
+/* Skala odcinkowa: epoka klasyczna i augustowska dostają najwięcej miejsca.
+   [rok od, rok do, szerokość w jednostkach płótna]                            */
+const K_SEG=[[-3200,-1200,510],[-1200,-800,285],[-800,-500,345],[-500,-300,495],
+             [-300,-100,360],[-100,100,630],[100,476,375]];
+const K_ACC=(()=>{let a=[],x=0;for(const s of K_SEG){a.push([kAx(s[0]),kAx(s[1]),x,s[2]]);x+=s[2]}return a})();
+
+function kx(year){
+  const a=kAx(year);
+  const f=K_ACC[0], l=K_ACC[K_ACC.length-1];
+  if(a<=f[0]) return f[2];
+  if(a>=l[1]) return l[2]+l[3];
+  for(const s of K_ACC) if(a>=s[0]&&a<=s[1]) return s[2]+(a-s[0])/(s[1]-s[0])*s[3];
+  return 0;
+}
+/* odwrotność — potrzebna przy odczycie pozycji kursora */
+function kYear(x){
+  for(const s of K_ACC) if(x>=s[2]&&x<=s[2]+s[3]){
+    const a=s[0]+(x-s[2])/s[3]*(s[1]-s[0]);
+    return a<0?Math.round(a):Math.round(a)+1;
+  }
+  return x<0?-3200:476;
+}
+const kYr=y=>y<0?Math.abs(y)+' p.n.e.':y+' n.e.';
+
+/* ── pasma ─────────────────────────────────────────────────────────────────── */
+const K_LANE={
+  near:{y:352,t:'Bliski Wschód i Izrael',g:'chNear',c:'#e8a07a'},
+  grec:{y:512,t:'Grecja',            g:'chGrec',c:'#9fc4de'},
+  roma:{y:672,t:'Rzym',              g:'chRoma',c:'#e0b45f'},
+  chri:{y:812,t:'Chrześcijaństwo',   g:'chChri',c:'#c78fa8'},
+  work:{y:1000,t:'Dzieła i autorzy', g:'chWork',c:'#cbbf9c'}
+};
+
+/* k: p=punkt  s=okres  w=dzieło  a=życie autora                                */
+const K_EV=[
+ /* ——— Bliski Wschód i Izrael ——— */
+ {l:'near',y:-3200,t:'Pismo klinowe w Sumerze',d:'Zapis gospodarczy na glinie. Umowna granica prehistorii i historii: od tego momentu przeszłość mówi do nas własnym głosem, a nie tylko przez wykopalisko.'},
+ {l:'near',y:-3100,t:'Zjednoczenie Egiptu',d:'Górny i Dolny Egipt pod jedną koroną. Początek państwa, które przetrwa trzy tysiące lat.'},
+ {l:'near',y:-2600,t:'Piramidy w Gizie',d:'Grobowce Cheopsa, Chefrena i Mykerinosa. Świadectwo despotii wschodniej: władza zdolna zorganizować pracę dziesiątków tysięcy ludzi.'},
+ {l:'near',y:-2000,t:'Abraham',d:'Datowanie wyłącznie tradycyjne, oparte na chronologii biblijnej, nie na źródle archeologicznym.',u:1},
+ {l:'near',y:-1750,t:'Kodeks Hammurabiego',d:'Najsłynniejszy zbiór praw Mezopotamii, wyryty na diorytowej steli. Zasada talionu i stopniowanie kary wedle stanu społecznego.'},
+ {l:'near',y:-1250,t:'Exodus',d:'Datacja tradycyjna. Wyjście z Egiptu jako opowieść założycielska Izraela — przymierze zawarte w drodze, nie w ziemi.',u:1},
+ {l:'near',y:-1200,t:'Katastrofa epoki brązu',d:'Upadek Hetytów i Myken, najazdy Ludów Morza, zerwane szlaki. Wschodnie Śródziemnomorze cofa się o stulecia.'},
+ {l:'near',y:-1050,t:'Alfabet fenicki',d:'Dwadzieścia kilka znaków zamiast setek. Wynalazek, z którego wyrośnie pismo greckie, a potem łacińskie.'},
+ {l:'near',y:-1000,t:'Królestwo Dawida',d:'Zjednoczenie plemion, Jerozolima stolicą.'},
+ {l:'near',y:-960,t:'Świątynia Salomona',d:'Jedno miejsce kultu dla jednego Boga — monoteizm dostaje adres.'},
+ {l:'near',y:-587,t:'Niewola babilońska',d:'Nabuchodonozor burzy Świątynię i uprowadza elity. Paradoksalnie to na wygnaniu redaguje się i scala większość tekstów, które nazwiemy Starym Testamentem.'},
+ {l:'near',y:-550,y2:-330,t:'Imperium perskie',k:'s',d:'Od Cyrusa do Dariusza III. Największe państwo, jakie dotąd widział świat — i przeciwnik, na którym Grecy zbudują poczucie własnej odrębności.'},
+
+ /* ——— Grecja ——— */
+ {l:'grec',y:-2000,y2:-1450,t:'Cywilizacja minojska',k:'s',d:'Kreta: pałace bez murów obronnych, pismo linearne A, fresk zamiast pomnika bitwy.'},
+ {l:'grec',y:-1600,y2:-1200,t:'Cywilizacja mykeńska',k:'s',d:'Warownie, groby szybowe, pismo linearne B. Świat, który Homer będzie pamiętał już tylko jako legendę.'},
+ {l:'grec',y:-1200,y2:-800,t:'Wieki ciemne',k:'s',d:'Zanik pisma, spadek zaludnienia. Pamięć przechodzi w całości w tryb ustny — i właśnie tam dojrzewa epos.'},
+ {l:'grec',y:-776,t:'Pierwsze igrzyska olimpijskie',d:'Pierwsza data, od której Grecy zaczną liczyć czas wspólnie. Rozproszone polis dostają jeden kalendarz.'},
+ {l:'grec',y:-750,y2:-700,t:'Spisanie eposów',k:'s',d:'Homer i Hezjod. Alfabet trafia na to, co aojdowie śpiewali od pokoleń — ustna pamięć zamienia się w tekst.'},
+ {l:'grec',y:-621,t:'Prawa Drakona',d:'Pierwsze spisane prawo Aten. Surowe do przysłowiowości, ale spisane — a to znaczy: wyjęte z rąk arystokracji.'},
+ {l:'grec',y:-594,t:'Reformy Solona',d:'Zniesienie niewoli za długi, podział obywateli wedle majątku, nie urodzenia.'},
+ {l:'grec',y:-508,t:'Reformy Klejstenesa',d:'Podział na demy i fyle rozbija dawne układy rodowe. Umowny początek demokracji ateńskiej.'},
+ {l:'grec',y:-490,t:'Maraton',d:'Ateńscy hoplici rozbijają perski desant.'},
+ {l:'grec',y:-480,t:'Termopile i Salamina',d:'Trzystu Spartan opóźnia lądowy marsz, ateńska flota rozstrzyga wojnę na morzu.'},
+ {l:'grec',y:-461,y2:-429,t:'Wiek Peryklesa',k:'s',d:'Demokracja bezpośrednia u szczytu, budowa Partenonu, tragedia w pełnym rozkwicie.'},
+ {l:'grec',y:-431,y2:-404,t:'Wojna peloponeska',k:'s',d:'Ateny przeciw Sparcie. Tukidydes opisze ją jako pierwszy autor, który szuka przyczyn, a nie woli bogów.'},
+ {l:'grec',y:-399,t:'Śmierć Sokratesa',d:'Wyrok demokratycznego sądu na człowieka, który zadawał niewygodne pytania. Filozofia dostaje swojego męczennika.'},
+ {l:'grec',y:-387,t:'Akademia Platona',d:'Pierwsza trwała szkoła filozoficzna Zachodu.'},
+ {l:'grec',y:-335,t:'Likejon Arystotelesa',d:'Szkoła, w której filozofia zaczyna dzielić się na dyscypliny: logikę, fizykę, etykę, poetykę.'},
+ {l:'grec',y:-336,y2:-323,t:'Wyprawa Aleksandra',k:'s',d:'Trzynaście lat, dwadzieścia tysięcy kilometrów, koniec imperium perskiego. Ten odcinek osi ma w kursie własną mapę.',a:1},
+ {l:'grec',y:-323,y2:-30,t:'Hellenizm',k:'s',d:'Kultura grecka jako język całego Wschodu. Aleksandria z Biblioteką, Muzejon, przekład Septuaginty.'},
+
+ /* ——— Rzym ——— */
+ {l:'roma',y:-753,t:'Założenie Rzymu',d:'Data legendarna, wyliczona wstecz przez samych Rzymian. Tu mit styka się z historią i przechodzi w nią bez szwu.',u:1},
+ {l:'roma',y:-509,t:'Początek republiki',d:'Wygnanie Tarkwiniusza Pysznego. Rzym zamienia króla na dwóch dorocznych konsulów — i na pięć wieków uczyni z nienawiści do króla zasadę ustrojową.'},
+ {l:'roma',y:-494,y2:-287,t:'Walka stanów',k:'s',d:'Plebejusze wydzierają patrycjuszom trybunat, prawo pisane i dostęp do urzędów.'},
+ {l:'roma',y:-264,y2:-146,t:'Wojny punickie',k:'s',d:'Trzy wojny z Kartaginą. Hannibal pod Kannami, Scypion pod Zamą, wreszcie zaoranie miasta solą.'},
+ {l:'roma',y:-146,t:'Zburzenie Kartaginy i Koryntu',d:'W jednym roku pada rywal na zachodzie i ostatni opór na wschodzie. Rzym jest panem Morza Śródziemnego.'},
+ {l:'roma',y:-133,y2:-121,t:'Grakchowie',k:'s',d:'Próba reformy rolnej kończy się zabójstwem trybunów. Do polityki rzymskiej wchodzi przemoc i już z niej nie wyjdzie.'},
+ {l:'roma',y:-82,y2:-79,t:'Dyktatura Sulli',k:'s',d:'Proskrypcje: listy obywateli, których wolno bezkarnie zabić. Republika łamie własne reguły, żeby się bronić.'},
+ {l:'roma',y:-63,t:'Konsulat Cycerona',d:'Homo novus rozbija spisek Katyliny czterema mowami. Retoryka okazuje się bronią równie skuteczną co legion.'},
+ {l:'roma',y:-49,y2:-45,t:'Wojna domowa Cezara',k:'s',d:'Przekroczenie Rubikonu, Farsalos, dyktatura dożywotnia.'},
+ {l:'roma',y:-44,t:'Zabójstwo Cezara',d:'Idy marcowe. Zamachowcy chcieli ocalić republikę — przyśpieszyli jej koniec.'},
+ {l:'roma',y:-31,t:'Akcjum',d:'Oktawian pokonuje Antoniusza i Kleopatrę. Koniec stu lat wojen domowych.'},
+ {l:'roma',y:-27,t:'Oktawian zostaje Augustem',d:'Senat nadaje mu tytuł i formalnie „przywraca republikę". W praktyce zaczyna się pryncypat — jedynowładztwo w kostiumie dawnego ustroju.'},
+ {l:'roma',y:14,t:'Śmierć Augusta',d:'Władzę dziedziczy Tyberiusz. Skoro pryncypat przechodzi na następcę, wszyscy wiedzą już, czym naprawdę jest.'},
+ {l:'roma',y:284,t:'Dominat Dioklecjana',d:'Cesarz przestaje udawać pierwszego obywatela: zostaje panem i bogiem, dominus et deus.'},
+ {l:'roma',y:395,t:'Podział cesarstwa',d:'Po śmierci Teodozjusza Wschód i Zachód rozchodzą się na dobre.'},
+ {l:'roma',y:476,t:'Upadek cesarstwa zachodniego',d:'Odoaker odsyła insygnia do Konstantynopola. Data umowna, wybrana przez późniejszych historyków — dla współczesnych nic się tego dnia nie skończyło.'},
+
+ /* ——— Chrześcijaństwo ——— */
+ {l:'chri',y:-4,y2:30,t:'Jezus z Nazaretu',k:'s',d:'Narodziny ok. 4 p.n.e. — jeszcze za panowania Heroda Wielkiego, czyli paradoksalnie „przed naszą erą".'},
+ {l:'chri',y:30,t:'Ukrzyżowanie',d:'Wyrok wydaje Poncjusz Piłat, prefekt Judei. To egzekucja z rozkazu lokalnego namiestnika, nie prześladowanie chrześcijan — chrześcijan jako grupy jeszcze nie ma.'},
+ {l:'chri',y:50,y2:100,t:'Listy i Ewangelie',k:'s',d:'Najpierw Listy Pawła, potem cztery Ewangelie. Nowy Testament powstaje przez pół wieku, w greckim koine.'},
+ {l:'chri',y:64,t:'Prześladowania Nerona',d:'Po pożarze Rzymu cesarz wskazuje winnych. Pierwsze prawdziwe prześladowanie chrześcijan — 82 lata po śmierci Wergiliusza.'},
+ {l:'chri',y:70,t:'Zburzenie Świątyni',d:'Tytus równa z ziemią Jerozolimę. Judaizm traci centrum kultu, chrześcijaństwo ostatecznie oddziela się od synagogi.'},
+ {l:'chri',y:313,t:'Edykt mediolański',d:'Konstantyn i Licyniusz gwarantują wolność wyznania. Z religii prześladowanej — tolerowana.'},
+ {l:'chri',y:380,t:'Edykt tesaloński',d:'Teodozjusz czyni chrześcijaństwo religią państwową. W ciągu 67 lat prześladowani stają się jedynym legalnym kultem.'},
+
+ /* ——— dzieła ——— */
+ {l:'work',y:-1200,t:'Epos o Gilgameszu',k:'w',d:'Wersja kanoniczna na dwunastu tabliczkach. Najstarszy epos świata: przyjaźń, śmierć Enkidu, daremne szukanie nieśmiertelności i opowieść o potopie starsza od biblijnej.'},
+ {l:'work',y:-750,t:'Iliada',k:'w',d:'Pięćdziesiąt dni ostatniego roku wojny trojańskiej. Temat podany w pierwszym słowie: gniew.'},
+ {l:'work',y:-720,t:'Odyseja',k:'w',d:'Powrót zamiast wojny, spryt zamiast siły. Pierwszy w Europie bohater, który wygrywa głową.'},
+ {l:'work',y:-700,t:'Teogonia',k:'w',d:'Hezjod porządkuje bogów w genealogię — mit dostaje strukturę.'},
+ {l:'work',y:-458,t:'Oresteja',k:'w',d:'Jedyna zachowana trylogia. Od zemsty rodowej do sądu obywatelskiego: Ajschylos pokazuje narodziny prawa.'},
+ {l:'work',y:-441,t:'Antygona',k:'w',d:'Prawo boskie przeciw państwowemu. Wzorcowy konflikt tragiczny: obie strony mają rację i obie przegrywają.'},
+ {l:'work',y:-429,t:'Król Edyp',k:'w',d:'Ironia tragiczna doprowadzona do perfekcji — bohater szuka zbrodniarza i znajduje siebie.'},
+ {l:'work',y:-431,t:'Medea',k:'w',d:'Eurypides oddaje głos kobiecie i barbarzyńcy. Zbrodnia z namiętności, nie z fatum.'},
+ {l:'work',y:-380,t:'Państwo',k:'w',d:'Mit jaskini, teoria idei, państwo rządzone przez filozofów.'},
+ {l:'work',y:-335,t:'Poetyka',k:'w',d:'Arystoteles definiuje tragedię, katharsis i mimesis. Pierwsza teoria literatury Zachodu.'},
+ {l:'work',y:-29,y2:-19,t:'Eneida',k:'w',d:'Dwanaście ksiąg pisanych przez dziesięć lat i nieukończonych. Akcja toczy się ok. 1184 p.n.e. — jakieś 1155 lat przed piórem autora.'},
+ {l:'work',y:-23,t:'Pieśni Horacego',k:'w',d:'Carpe diem, aurea mediocritas, exegi monumentum. Trzy księgi, z których wyrósł cały horacjanizm.'},
+ {l:'work',y:8,t:'Metamorfozy',k:'w',d:'Piętnaście ksiąg przemian od Chaosu po apoteozę Cezara. Największy magazyn mitów, jaki odziedziczyła Europa.'},
+ {l:'work',y:397,t:'Wyznania',k:'w',d:'Augustyn pisze pierwszą autobiografię duchową — i wynajduje wnętrze jako temat literatury.'},
+ {l:'work',y:405,t:'Wulgata',k:'w',d:'Hieronim tłumaczy Biblię na łacinę. Przekład, na którym Zachód będzie się uczył czytać przez tysiąc lat.'},
+ {l:'work',y:426,t:'Państwo Boże',k:'w',d:'Odpowiedź na złupienie Rzymu: są dwa państwa, ziemskie i Boże, i tylko jedno z nich trwa.'}
+];
+
+/* życiorysy — belki. To one rozwiązują paradoks bez jednego słowa komentarza. */
+const K_LIFE=[
+ {t:'Safona',a:-630,d:-570},{t:'Ajschylos',a:-525,d:-456},{t:'Sofokles',a:-496,d:-406},
+ {t:'Herodot',a:-484,d:-425},{t:'Eurypides',a:-480,d:-406},{t:'Sokrates',a:-469,d:-399},
+ {t:'Tukidydes',a:-460,d:-400},{t:'Platon',a:-427,d:-347},{t:'Arystoteles',a:-384,d:-322},
+ {t:'Epikur',a:-341,d:-270},{t:'Cyceron',a:-106,d:-43},{t:'Cezar',a:-100,d:-44},
+ {t:'Wergiliusz',a:-70,d:-19,hi:1},{t:'Horacy',a:-65,d:-8},{t:'Owidiusz',a:-43,d:17},
+ {t:'Seneka',a:-4,d:65},{t:'Tacyt',a:56,d:120},{t:'Marek Aureliusz',a:121,d:180},
+ {t:'Augustyn',a:354,d:430}
+];
+
+/* czas mityczny — łańcuch bez skali; ostatnie ogniwo to szew z historią */
+const K_MYTH=[
+ ['Chaos','Z Chaosu wyłaniają się Gaja, Uranos, Tartar i Eros'],
+ ['Tytani','Kronos obala Uranosa i pożera własne dzieci'],
+ ['Tytanomachia','Zeus strąca Kronosa; podział świata: Zeus — niebo, Posejdon — morze, Hades — podziemie'],
+ ['Prometeusz','Ulepienie i uszlachetnienie człowieka, kradzież ognia, kara na Kaukazie'],
+ ['Cztery wieki','Złoty → srebrny → brązowy → żelazny; u Hezjoda, potem u Owidiusza'],
+ ['Potop','Deukalion i Pyrra odbudowują ludzkość z rzucanych za siebie kamieni'],
+ ['Herosi','Perseusz, Herakles, Tezeusz, Dedal, Edyp'],
+ ['Argonauci','Wyprawa po złote runo: Jazon, Orfeusz, Peleus, Telamon'],
+ ['Wojna tebańska','Siedmiu przeciw Tebom — a zaraz po niej Antygona'],
+ ['Wojna trojańska','„1184 p.n.e." wedle wyliczenia Eratostenesa'],
+ ['Nostoi','Powroty: Odyseusz przez dziesięć lat, Agamemnon, Menelaos'],
+ ['Eneasz','Siedem lat tułaczki: Troja → Kartagina → Lacjum'],
+ ['Alba Longa','Askaniusz i trzysta lat królów albańskich'],
+ ['753 p.n.e.','Romulus zakłada Rzym — mit styka się z historią']
+];
+
+/* nakładka paradoksu — trzy pomiary, każdy z własną strzałką */
+const K_PARA=[
+ {a:-19,b:-4,l:'work',t:'Wergiliusz umiera 15 lat przed narodzinami Jezusa',
+  d:'Nie mogli się spotkać. Owidiusz owszem, był współczesny — ale w chwili ukrzyżowania nie żył już od kilkunastu lat, a wcześniej siedział na wygnaniu nad Morzem Czarnym.'},
+ {a:-19,b:64,l:'chri',t:'Od śmierci Wergiliusza do prześladowań Nerona: 82 lata',
+  d:'Bez roku zerowego: od 19 p.n.e. do 64 n.e. mija 82 lata, nie 83. Tyle, ile od końca II wojny światowej do dziś.'},
+ {a:-1184,b:-29,l:'myth',t:'Akcja Eneidy dzieje się ok. 1155 lat przed jej napisaniem',
+  d:'Eneida nie jest reportażem, tylko mitem założycielskim. To tak, jakby polski poeta w 1918 roku pisał wielki epos o chrzcie Polski w 966.'}
+];
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   WIELKA OŚ ANTYKU — rysowanie
+   Etykiety mają stały rozmiar w jednostkach płótna (nie w pikselach), więc układ
+   liczony raz przy budowie nigdy się nie rozjeżdża, a przybliżanie działa jak lupa.
+   ══════════════════════════════════════════════════════════════════════════════ */
+const ksvg=el('chronos');
+
+const K_GEO={myth:[60,280], rule:350, near:570, grec:790, roma:1010, chri:1200, work:1420, life:1470};
+const K_ROWH=32, K_F=21;                       /* wysokość wiersza i stopień pisma etykiet */
+const kWid=(s,f)=>s.length*f*0.5+f*0.9;        /* przybliżona szerokość napisu */
+/* „43 p.n.e.–17 n.e." — a nie „43–17 n.e." */
+const kLifeYrs=(a,d)=>a<0&&d<0 ? `${-a}–${-d} p.n.e.`
+                   : a<0        ? `${-a} p.n.e.–${d} n.e.`
+                   :              `${a}–${d} n.e.`;
+
+/* rozkłada etykiety na wiersze tak, żeby się nie nachodziły */
+function kStack(items,f){
+  const rows=[];
+  items.forEach(it=>{
+    const w=kWid(it.lab||it.t,f), a=it.cx-w/2, b=it.cx+w/2;
+    let r=0;
+    while(rows[r]!==undefined&&rows[r]>a-14) r++;
+    rows[r]=b; it.row=r;
+  });
+  return items;
+}
+/* rok wpisany w etykietę — druga linijka podpisów pod osią tylko by się zderzała */
+const kEvYr=e=>e.y2!==undefined
+  ? `${e.y<0?Math.abs(e.y):e.y}–${e.y2<0?Math.abs(e.y2):e.y2}${e.y2<0?'':' n.e.'}`
+  : `${e.y<0?Math.abs(e.y):e.y}${e.y<0?'':' n.e.'}`;
+
+let kg='';
+kg+=`<defs>
+<linearGradient id="kSky" x1="0" y1="0" x2="0" y2="1">
+  <stop offset="0" stop-color="#0c141d"/><stop offset="1" stop-color="#080c11"/></linearGradient>
+<linearGradient id="kMythG" x1="0" y1="0" x2="1" y2="0">
+  <stop offset="0" stop-color="#b25578" stop-opacity=".05"/>
+  <stop offset=".55" stop-color="#b25578" stop-opacity=".16"/>
+  <stop offset="1" stop-color="#e0b45f" stop-opacity=".2"/></linearGradient>
+<pattern id="kWeave" width="14" height="14" patternTransform="rotate(35)" patternUnits="userSpaceOnUse">
+  <line x1="0" y1="0" x2="0" y2="14" stroke="#b25578" stroke-width="1.1" opacity=".22"/></pattern>
+<filter id="kGlow" x="-60%" y="-60%" width="220%" height="220%">
+  <feGaussianBlur stdDeviation="7"/></filter>
+</defs>`;
+kg+=`<rect x="${-K_W}" y="${-K_H}" width="${K_W*3}" height="${K_H*3}" fill="url(#kSky)"/>`;
+
+/* ── 1. czas mityczny: wstęga bez skali ─────────────────────────────────────── */
+{
+  const [y0,y1]=K_GEO.myth, mid=(y0+y1)/2, n=K_MYTH.length, pad=110;
+  const step=(K_W-pad*2)/(n-1);
+  let s=`<rect x="${pad-70}" y="${y0}" width="${K_W-pad*2+140}" height="${y1-y0}" rx="26"
+            fill="url(#kMythG)" stroke="#7a2f4a" stroke-width="1.4" stroke-dasharray="11 7" opacity=".85"/>`;
+  s+=`<rect x="${pad-70}" y="${y0}" width="${K_W-pad*2+140}" height="${y1-y0}" rx="26" fill="url(#kWeave)" opacity=".5"/>`;
+  s+=`<text class="kpin" data-y="${y0-16}" x="0" y="${y0-16}" font-family="Cinzel,serif"
+        font-weight="600" font-size="26" letter-spacing="4.4" fill="#e2aec6" opacity=".9"
+        paint-order="stroke" stroke="#080c11" stroke-width="7">CZAS MITYCZNY<tspan
+        font-family="EB Garamond,serif" font-style="italic" font-size="21" letter-spacing="0"
+        fill="#c9a2b4" opacity=".85">   porządek opowieści, nie faktów — bez skali</tspan></text>`;
+  let ln='';
+  for(let i=0;i<n;i++) ln+=(i?'L':'M')+(pad+i*step).toFixed(1)+' '+(mid+(i%2?9:-9));
+  s+=`<path d="${ln}" fill="none" stroke="#b25578" stroke-width="2" opacity=".5" stroke-linejoin="round"/>`;
+  K_MYTH.forEach((m,i)=>{
+    const x=pad+i*step, up=i%2===0, ty=up?mid-34:mid+50, last=i===n-1;
+    s+=`<g class="kmy" data-i="${i}">`;
+    s+=`<circle cx="${x.toFixed(1)}" cy="${(mid+(i%2?9:-9)).toFixed(1)}" r="${last?11:7}"
+          fill="${last?'#ffd894':'#e2aec6'}" stroke="#2a1119" stroke-width="2"/>`;
+    s+=`<text x="${x.toFixed(1)}" y="${ty}" text-anchor="middle" font-family="Cinzel,serif"
+          font-weight="600" font-size="${last?25:23}" letter-spacing=".5"
+          fill="${last?'#ffd894':'#f0cfdd'}" paint-order="stroke" stroke="#0b0f14"
+          stroke-width="4" stroke-linejoin="round">${esc(m[0])}</text></g>`;
+  });
+  /* szew: ostatnie ogniwo mitu spada na oś historyczną w 753 p.n.e. */
+  const sx=pad+(n-1)*step, tx=kx(-753);
+  s+=`<path d="M${sx} ${mid+18} C${sx} ${y1+40} ${tx} ${y1+40} ${tx} ${K_GEO.rule-16}"
+        fill="none" stroke="#ffd894" stroke-width="2" stroke-dasharray="6 6" opacity=".7"/>`;
+  s+=`<text x="${(sx+tx)/2}" y="${y1+62}" text-anchor="middle" font-family="EB Garamond,serif"
+        font-style="italic" font-size="23" fill="#ffd894" opacity=".85"
+        paint-order="stroke" stroke="#0b0f14" stroke-width="4">tu mit wchodzi w historię</text>`;
+  kg+=`<g id="chMyth">${s}</g>`;
+}
+
+/* ── 2. linijka czasu ───────────────────────────────────────────────────────── */
+{
+  const ry=K_GEO.rule;
+  let s=`<line x1="0" y1="${ry}" x2="${K_W}" y2="${ry}" stroke="#a8853f" stroke-width="2.4" opacity=".85"/>`;
+  /* granice odcinków skali — uczciwie pokazujemy, gdzie skala się zmienia */
+  K_ACC.slice(1).forEach(seg=>{
+    s+=`<line x1="${seg[2]}" y1="${ry-26}" x2="${seg[2]}" y2="${K_H-40}" stroke="#e2d1ab"
+          stroke-width="1" stroke-dasharray="3 9" opacity=".13"/>`;
+  });
+  for(let y=-3200;y<=400;y+=100){
+    if(y===0) continue;
+    const x=kx(y), big=y%500===0;
+    s+=`<line x1="${x.toFixed(1)}" y1="${ry-(big?13:7)}" x2="${x.toFixed(1)}" y2="${ry+(big?13:7)}"
+          stroke="#e0b45f" stroke-width="${big?1.8:1}" opacity="${big?.8:.4}"/>`;
+    if(big) s+=`<text x="${x.toFixed(1)}" y="${ry-24}" text-anchor="middle"
+          font-family="Inter,system-ui,sans-serif" font-size="19" font-weight="600" letter-spacing="1.4"
+          fill="#a8853f">${y<0?Math.abs(y):'+'+y}</text>`;
+  }
+  s+=`<text x="${kx(476)}" y="${ry-24}" text-anchor="end" font-family="Inter,system-ui,sans-serif"
+        font-size="19" font-weight="600" letter-spacing="1.4" fill="#a8853f">476 n.e.</text>`;
+  s+=`<text class="kpin" data-y="${ry+32}" x="0" y="${ry+32}" font-family="Inter,system-ui,sans-serif"
+        font-size="16" letter-spacing="1.2" fill="#5b656f" paint-order="stroke" stroke="#080c11"
+        stroke-width="6">skala zmienna &mdash; epoka klasyczna i augustowska rozciągnięte</text>`;
+  kg+=`<g id="chRule">${s}</g>`;
+}
+
+/* ── 3. pasma historyczne ───────────────────────────────────────────────────── */
+Object.keys(K_LANE).forEach(key=>{
+  const L=K_LANE[key], by=K_GEO[key];
+  const evs=K_EV.filter(e=>e.l===key).map(e=>Object.assign({},e,{
+    x1:kx(e.y), x2:e.y2!==undefined?kx(e.y2):null,
+    cx:e.y2!==undefined?(kx(e.y)+kx(e.y2))/2:kx(e.y),
+    lab:e.t+'  '+kEvYr(e)
+  })).sort((a,b)=>a.cx-b.cx);
+  kStack(evs,K_F);
+
+  let s=`<line x1="${-K_W}" y1="${by}" x2="${K_W*2}" y2="${by}" stroke="${L.c}" stroke-width="1.3" opacity=".3"/>`;
+  /* tytuł pasma przyklejony do lewej krawędzi kadru — nie ucieka przy przybliżeniu */
+  s+=`<text class="kpin" data-y="${by+36}" x="0" y="${by+36}" font-family="Cinzel,serif"
+        font-weight="600" font-size="25" letter-spacing="3.6" fill="${L.c}" opacity=".85"
+        paint-order="stroke" stroke="#080c11" stroke-width="7"
+        stroke-linejoin="round">${esc(L.t.toUpperCase())}</text>`;
+
+  evs.forEach((e,i)=>{
+    const ly=by-18-e.row*K_ROWH;
+    const idx=K_EV.findIndex(o=>o.l===e.l&&o.t===e.t);
+    const dash=e.u?' stroke-dasharray="4 4"':'';
+    s+=`<g class="kev" data-i="${idx}" tabindex="0" role="button" aria-label="${esc(e.t)}">`;
+    /* łodyżka od znaku do etykiety */
+    s+=`<line class="kstem" x1="${e.cx.toFixed(1)}" y1="${by-4}" x2="${e.cx.toFixed(1)}" y2="${ly+7}"
+          stroke="${L.c}" stroke-width="1" opacity=".38"${dash}/>`;
+    if(e.x2!==null){
+      const w=Math.max(6,e.x2-e.x1);
+      s+=`<rect class="ksym" x="${e.x1.toFixed(1)}" y="${by-7}" width="${w.toFixed(1)}" height="14" rx="7"
+            fill="${L.c}" opacity=".55" stroke="${L.c}" stroke-width="1.4"/>`;
+    }else if(e.k==='w'){
+      s+=`<rect class="ksym" x="${(e.x1-8).toFixed(1)}" y="${by-11}" width="16" height="22" rx="3"
+            fill="#0b0f14" stroke="${L.c}" stroke-width="2.4"/>
+          <line x1="${(e.x1-3).toFixed(1)}" y1="${by-11}" x2="${(e.x1-3).toFixed(1)}" y2="${by+11}"
+            stroke="${L.c}" stroke-width="1.6" opacity=".7"/>`;
+    }else{
+      s+=`<path class="ksym" d="M${e.x1.toFixed(1)} ${by-11}l10 11-10 11-10-11z"
+            fill="${e.u?'#0b0f14':L.c}" stroke="${L.c}" stroke-width="2.2"/>`;
+    }
+    s+=`<text class="klab" x="${e.cx.toFixed(1)}" y="${ly}" text-anchor="middle"
+          font-family="EB Garamond,serif" font-size="${K_F}" font-weight="${e.k==='w'?'620':'430'}"
+          font-style="${e.k==='w'?'italic':'normal'}"
+          fill="${e.k==='w'?'#efe0bd':'#ded4bf'}" opacity="${e.u?.72:.95}"
+          paint-order="stroke" stroke="#080c11" stroke-width="5.5" stroke-linejoin="round">${esc(e.t)}<tspan
+          font-family="Inter,system-ui,sans-serif" font-size="15" font-style="normal" font-weight="400"
+          letter-spacing=".6" fill="${L.c}" opacity=".8">  ${esc(kEvYr(e))}</tspan></text>`;
+    s+=`</g>`;
+  });
+  kg+=`<g id="${L.g}">${s}</g>`;
+});
+
+/* ── 4. belki życia autorów ─────────────────────────────────────────────────── */
+{
+  const rows=[]; const bars=K_LIFE.map(p=>Object.assign({},p)).sort((a,b)=>a.a-b.a);
+  bars.forEach(p=>{
+    p.x1=kx(p.a); p.x2=kx(p.d);
+    const w=Math.max(p.x2-p.x1, kWid(p.t+'  '+kLifeYrs(p.a,p.d),19)+14);
+    let r=0; while(rows[r]!==undefined&&rows[r]>p.x1-16) r++;
+    rows[r]=p.x1+w; p.row=r; p.w=w;
+  });
+  let s=`<text class="kpin" data-y="${K_GEO.life+30}" x="0" y="${K_GEO.life+30}"
+        font-family="Cinzel,serif" font-weight="600" font-size="23"
+        letter-spacing="3.4" fill="#9c8055" opacity=".85" paint-order="stroke" stroke="#080c11"
+        stroke-width="7">ŻYCIORYSY</text>`;
+  bars.forEach(p=>{
+    const y=K_GEO.life+58+p.row*30, hi=p.hi;
+    s+=`<g class="klife${hi?' hi':''}" data-t="${esc(p.t)}">`;
+    s+=`<rect x="${p.x1.toFixed(1)}" y="${y}" width="${Math.max(4,p.x2-p.x1).toFixed(1)}" height="9" rx="4.5"
+          fill="${hi?'#ffd894':'#9c8055'}" opacity="${hi?.95:.62}"/>`;
+    s+=`<text x="${(p.x1+3).toFixed(1)}" y="${y-5}" font-family="EB Garamond,serif" font-size="20"
+          fill="${hi?'#ffd894':'#c3b9a5'}" opacity="${hi?1:.85}" paint-order="stroke" stroke="#080c11"
+          stroke-width="4">${esc(p.t)} <tspan font-size="15" fill="#7b8794">${
+            kLifeYrs(p.a,p.d)}</tspan></text>`;
+    s+=`</g>`;
+  });
+  kg+=`<g id="chLife">${s}</g>`;
+}
+
+/* ── 5. nakładka paradoksu ──────────────────────────────────────────────────── */
+{
+  let s='';
+  K_PARA.forEach((p,i)=>{
+    const ay=[K_GEO.work-96,K_GEO.chri-100,K_GEO.rule+96][i];
+    const x1=kx(p.a), x2=kx(p.b), mid=(x1+x2)/2;
+    s+=`<g class="kpar" data-i="${i}">`;
+    s+=`<path d="M${x1.toFixed(1)} ${ay+16}v-16h${(x2-x1).toFixed(1)}v16" fill="none"
+          stroke="#ff9ec4" stroke-width="2.4" opacity=".9"/>`;
+    s+=`<path d="M${x2.toFixed(1)} ${ay+16}l-7-11h14z" fill="#ff9ec4"/>`;
+    s+=`<path d="M${x1.toFixed(1)} ${ay+16}l-7-11h14z" fill="#ff9ec4"/>`;
+    s+=`<text x="${mid.toFixed(1)}" y="${ay-12}" text-anchor="middle" font-family="EB Garamond,serif"
+          font-size="25" font-weight="620" fill="#ffc4dd" paint-order="stroke" stroke="#0b0f14"
+          stroke-width="6" stroke-linejoin="round">${esc(p.t)}</text></g>`;
+  });
+  kg+=`<g id="chPara" style="display:none">${s}</g>`;
+}
+
+/* ── 6. podświetlenie strefy bieżącego modułu ───────────────────────────────── */
+kg+=`<g id="chZone" style="display:none"><rect id="chZoneR" x="0" y="0" width="0" height="0" rx="18"
+      fill="rgba(224,180,95,.045)" stroke="#a8853f" stroke-width="1.6" stroke-dasharray="12 9"
+      opacity=".7"/></g>`;
+
+ksvg.innerHTML=kg;
+
+/* ══════════════ kamera osi ══════════════ */
+let kVb={x:0,y:0,w:K_W,h:K_H}, kTgt={x:0,y:0,w:K_W,h:K_H}, kRect={w:900,h:560,l:0,t:0};
+function kMeasure(){const r=ksvg.getBoundingClientRect();
+  kRect={w:r.width||900,h:r.height||560,l:r.left,t:r.top}}
+function kClamp(o){
+  const ar=kRect.h/kRect.w;
+  o.w=Math.max(260,Math.min(K_W*1.25,o.w)); o.h=o.w*ar;
+  const mx=Math.max(80,o.w*.2), my=Math.max(60,o.h*.2);
+  o.x=Math.max(-mx,Math.min(K_W-o.w+mx,o.x));
+  o.y=Math.max(-my,Math.min(K_H-o.h+my,o.y));
+  return o;
+}
+function kSet(o,snap){kTgt=kClamp(Object.assign({},o)); if(snap){kVb=Object.assign({},kTgt);kApply()}}
+function kFit(){
+  const ar=kRect.h/kRect.w, w=Math.max(K_W,K_H/ar);
+  kSet({x:(K_W-w)/2,y:(K_H-w*ar)/2,w:w,h:w*ar});
+}
+const kPins=[...ksvg.querySelectorAll('.kpin')];
+let kYearOut=null;
+function kApply(){
+  ksvg.setAttribute('viewBox',
+    `${kVb.x.toFixed(1)} ${kVb.y.toFixed(1)} ${kVb.w.toFixed(1)} ${kVb.h.toFixed(1)}`);
+  /* tytuły pasm trzymają się lewej krawędzi kadru, żeby orientacja nie ginęła przy zoomie */
+  const px=(kVb.x+kVb.w*0.008).toFixed(1);
+  kPins.forEach(t=>t.setAttribute('x',px));
+  /* widoczny przedział czasu — w nagłówku, żeby nie zasłaniał samej osi */
+  if(kYearOut&&document.body.dataset.mode==='kurs'){
+    const a=kYear(Math.max(0,kVb.x)), b=kYear(Math.min(K_W,kVb.x+kVb.w));
+    kYearOut.textContent=kYr(a)+' – '+kYr(b);
+  }
+}
+/* przybliża do wskazanego zakresu lat i pasma */
+function kZoomTo(yFrom,yTo,lane,pad){
+  const x1=kx(yFrom), x2=kx(yTo), p=pad===undefined?190:pad;
+  /* górne ograniczenie szerokości: przy pełnym rozpięciu 3700 lat pismo zrobiłoby się
+     nieczytelne. Całościowy podgląd jest pod przyciskiem „cała oś".                  */
+  /* dolne ograniczenie trzyma pismo w rozsądnym rozmiarze przy wąskich zakresach,
+     górne — przy szerokich. Poza tym przedziałem zostają zoom i „cała oś".        */
+  let w=Math.min(1700,Math.max(1050,(x2-x1)+p*2)), cx=(x1+x2)/2;
+  const ar=kRect.h/kRect.w; let h=w*ar;
+  if(h<620){h=620;w=h/ar}
+  let cy=lane&&K_GEO[lane]!==undefined
+    ? (lane==='myth'?(K_GEO.myth[0]+K_GEO.myth[1])/2:K_GEO[lane]-40)
+    : K_H/2;
+  kSet({x:cx-w/2,y:cy-h/2,w:w,h:h});
+}
+function kZone(yFrom,yTo,lane){
+  const z=el('chZone'), r=el('chZoneR');
+  /* bez wskazanego pasma nie ma czego ramkować — modułowi obejmującemu całość
+     wystarczy widok całej osi                                                  */
+  if(yFrom===null||!lane){z.style.display='none';return}
+  const x1=kx(yFrom)-40, x2=kx(yTo)+40;
+  let y1,y2;
+  if(lane==='myth'){y1=K_GEO.myth[0]-14;y2=K_GEO.myth[1]+14}
+  else{y1=K_GEO[lane]-K_ROWH*5-26;y2=K_GEO[lane]+30}
+  r.setAttribute('x',x1.toFixed(1)); r.setAttribute('y',y1.toFixed(1));
+  r.setAttribute('width',Math.max(40,x2-x1).toFixed(1));
+  r.setAttribute('height',(y2-y1).toFixed(1));
+  z.style.display='';
+}
+
+/* ══════════════ interakcja ══════════════ */
+const kInfo=el('chInfo');
+function kShow(e){
+  if(!e){kInfo.classList.remove('on');return}
+  kInfo.querySelector('.t').textContent=e.t;
+  kInfo.querySelector('.y').textContent=e.y2!==undefined
+    ? kYr(e.y)+' – '+kYr(e.y2) : kYr(e.y)+(e.u?' · datowanie umowne':'');
+  kInfo.querySelector('.d').textContent=e.d||'';
+  kInfo.classList.add('on');
+}
+ksvg.addEventListener('click',ev=>{
+  const g=ev.target.closest('.kev');
+  if(g){kShow(K_EV[+g.dataset.i]);return}
+  const m=ev.target.closest('.kmy');
+  if(m){const q=K_MYTH[+m.dataset.i];
+    kShow({t:q[0],y:null,d:q[1],y2:undefined});
+    kInfo.querySelector('.y').textContent='czas mityczny — bez datowania';return}
+  const p=ev.target.closest('.kpar');
+  if(p){const q=K_PARA[+p.dataset.i];kShow({t:q.t,d:q.d});
+    kInfo.querySelector('.y').textContent='rozbiór paradoksu';return}
+  if(ev.target.closest('#chInfo'))return;
+  kShow(null);
+});
+ksvg.addEventListener('keydown',ev=>{
+  if(ev.key!=='Enter'&&ev.key!==' ')return;
+  const g=ev.target.closest('.kev'); if(!g)return;
+  ev.preventDefault(); kShow(K_EV[+g.dataset.i]);
+});
+kInfo.addEventListener('click',ev=>{if(ev.target.closest('.kx'))kShow(null)});
+
+/* przesuwanie i skalowanie — ten sam model wskaźnikowy co na mapie */
+{
+  const pts=new Map(); let bs=null, mv=0;
+  ksvg.addEventListener('pointerdown',e=>{
+    if(e.target.closest('.kev,.kmy,.kpar'))return;
+    ksvg.setPointerCapture(e.pointerId);
+    pts.set(e.pointerId,{x:e.clientX,y:e.clientY}); ksvg.classList.add('drag'); bs=null; mv=0;
+  });
+  ksvg.addEventListener('pointermove',e=>{
+    if(!pts.has(e.pointerId))return;
+    const k=kVb.w/kRect.w, prev=pts.get(e.pointerId);
+    pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    if(pts.size===1){
+      mv+=Math.abs(e.clientX-prev.x)+Math.abs(e.clientY-prev.y);
+      if(mv<3)return;
+      kTgt.x-=(e.clientX-prev.x)*k; kTgt.y-=(e.clientY-prev.y)*k; kClamp(kTgt);
+      kVb.x=kTgt.x; kVb.y=kTgt.y; kApply();
+    }else if(pts.size===2){
+      const a=[...pts.values()], d=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y);
+      if(bs===null){bs={d:d,w:kTgt.w,cx:(a[0].x+a[1].x)/2,cy:(a[0].y+a[1].y)/2,x:kTgt.x,y:kTgt.y};return}
+      const nw=Math.max(260,Math.min(K_W*1.25,bs.w*bs.d/d));
+      const rx=(bs.cx-kRect.l)/kRect.w, ry=(bs.cy-kRect.t)/kRect.h, nh=nw*kRect.h/kRect.w;
+      kTgt.x=bs.x+(bs.w-nw)*rx; kTgt.y=bs.y+(bs.w*kRect.h/kRect.w-nh)*ry;
+      kTgt.w=nw; kTgt.h=nh; kClamp(kTgt); kVb=Object.assign({},kTgt); kApply();
+    }
+  });
+  ['pointerup','pointercancel','pointerleave'].forEach(t=>ksvg.addEventListener(t,e=>{
+    pts.delete(e.pointerId); bs=null; if(!pts.size)ksvg.classList.remove('drag')}));
+  ksvg.addEventListener('wheel',e=>{
+    e.preventDefault();
+    const rx=(e.clientX-kRect.l)/kRect.w, ry=(e.clientY-kRect.t)/kRect.h;
+    const f=Math.exp(Math.max(-1,Math.min(1,e.deltaY/260))*.55);
+    const nw=Math.max(260,Math.min(K_W*1.25,kTgt.w*f)), nh=nw*kRect.h/kRect.w;
+    kTgt.x+=(kTgt.w-nw)*rx; kTgt.y+=(kTgt.h-nh)*ry; kTgt.w=nw; kTgt.h=nh; kClamp(kTgt);
+  },{passive:false});
+}
+function kZoom(f){
+  const cx=kTgt.x+kTgt.w/2, cy=kTgt.y+kTgt.h/2, nw=kTgt.w*f;
+  kSet({x:cx-nw/2,y:cy-nw*kRect.h/kRect.w/2,w:nw,h:nw*kRect.h/kRect.w});
+}
+
+/* własna pętla wygładzania — całkowicie odseparowana od pętli atlasu */
+let kLast=performance.now();
+function kLoop(t){
+  const dt=Math.min(64,t-kLast); kLast=t;
+  const s=1-Math.pow(.0012,dt/1000);
+  if(Math.abs(kTgt.x-kVb.x)+Math.abs(kTgt.y-kVb.y)+Math.abs(kTgt.w-kVb.w)>.4){
+    kVb.x+=(kTgt.x-kVb.x)*s; kVb.y+=(kTgt.y-kVb.y)*s;
+    kVb.w+=(kTgt.w-kVb.w)*s; kVb.h+=(kTgt.h-kVb.h)*s; kApply();
+  }
+  requestAnimationFrame(kLoop);
+}
+
+/* przełączanie pasm w popoverze warstw */
+[['cMyth','chMyth'],['cNear','chNear'],['cGrec','chGrec'],['cRoma','chRoma'],
+ ['cChri','chChri'],['cWork','chWork']].forEach(([cb,gid])=>{
+  el(cb).onchange=e=>{el(gid).style.display=e.target.checked?'':'none'};
+});
+el('cWork').addEventListener('change',e=>{el('chLife').style.display=e.target.checked?'':'none'});
+el('cPara').onchange=e=>{el('chPara').style.display=e.target.checked?'':'none'};
+
+new ResizeObserver(()=>{kMeasure();kClamp(kTgt);kApply()}).observe(ksvg);
+kMeasure(); kFit(); kVb=Object.assign({},kTgt); kApply();
+requestAnimationFrame(kLoop);
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   KURS — szesnaście modułów.
+   Każdy ma ten sam szkielet: wprowadzenie → co na osi → dzieła → pojęcia →
+   ćwiczenie → quiz → twój wkład. Trzynaście rozdziałów dostaje równą wagę.
+   k: w=wstęp  l=literatura  h=historia  p=filozofia  y=synteza  t=metoda
+   ══════════════════════════════════════════════════════════════════════════════ */
+const K_KIND={w:['Wstęp','k-w'],l:['Literatura','k-l'],h:['Historia','k-h'],
+              p:['Filozofia','k-p'],y:['Synteza','k-y'],t:['Metoda','k-t']};
+
+const MOD=[
+{
+ id:'m00', n:'0', k:'w', t:'Diagnoza', when:'zanim zaczniesz', mins:8,
+ zone:[-1250,100,'work'],
+ axis:'Odpowiedz najpierw, patrz potem. Oś czasu zostaje w tle celowo — wrócimy do niej w module XIV.',
+ lead:`<p>Zanim przeczytasz jedno zdanie o antyku, odpowiedz na trzy pytania. Nie chodzi o to,
+ żebyś zgadł. Chodzi o to, żebyś <b>popełnił błąd na piśmie</b> — bo wiedza wchodzi trwale wtedy,
+ gdy koryguje konkretne, twoje własne przekonanie, a nie wtedy, gdy dolewa się do pustego naczynia.</p>
+ <p>Ten mechanizm nazywa się <em>efektem testowania</em>: materiał, którego nie umiesz, ale
+ próbowałeś odpowiedzieć, zapamiętasz lepiej niż materiał, który tylko przeczytałeś. Twoje
+ dzisiejsze odpowiedzi zostaną zapisane i odsłonięte dopiero na końcu kursu.</p>`,
+ works:[], terms:[],
+ ex:{type:'diag'},
+ quiz:[], prompt:'Zapisz w jednym zdaniu, co według Ciebie znaczy „starożytność" — bez zaglądania nigdzie. Wrócisz do tego zdania na końcu dnia.'
+},
+{
+ id:'m01', n:'I', k:'w', t:'Czym jest antyk', when:'3200 p.n.e. – 476 n.e.', mins:20,
+ zone:[-3200,476,null],
+ axis:'Spójrz na całą oś naraz. Zwróć uwagę, że pasmo mityczne jest odczepione i nie ma skali — to nie jest ozdobnik, tylko teza.',
+ lead:`<p>Historia zaczyna się tam, gdzie zaczyna się pismo. To nie definicja arbitralna: od
+ momentu, w którym ktoś zapisał, ile jęczmienia komu wydano, przeszłość zaczyna mówić do nas
+ własnym głosem, a nie tylko przez wykop, kość i skorupę. Wszystko wcześniejsze nazywamy
+ prehistorią — nie dlatego, że nic się tam nie działo, lecz dlatego, że milczy.</p>
+ <p>Antyk to blisko cztery tysiące lat, od pisma klinowego po umowny rok 476. Umowny, bo
+ gdy Odoaker odsyłał cesarskie insygnia do Konstantynopola, nikt nie miał poczucia, że epoka
+ się kończy — granicę wyznaczyli historycy dużo później. <b>Periodyzacja jest narzędziem, nie
+ faktem</b>: dzielimy czas tam, gdzie nam to pomaga myśleć.</p>
+ <p>Drugie rozróżnienie jest ważniejsze od dat. <em>Mit</em> i <em>historia</em> to dwa różne
+ sposoby porządkowania przeszłości. Historia pyta „jak było" i musi się wylegitymować źródłem.
+ Mit pyta „po co to jest" i legitymuje się sensem. Grek składający ofiarę nie sprawdzał, czy
+ Prometeusz istniał. Cały ten kurs opiera się na umiejętności rozdzielania tych dwóch trybów —
+ i na zrozumieniu, dlaczego starożytni wcale ich nie rozdzielali.</p>`,
+ works:[['Źródło pierwotne','powstałe w badanej epoce: inskrypcja, moneta, kronika, list, warstwa archeologiczna'],
+        ['Opracowanie','późniejszy tekst o epoce: podręcznik, monografia, hasło encyklopedyczne'],
+        ['Kanon','zbiór dzieł uznanych za obowiązkowe — zawsze czyjś wybór, zawsze do zakwestionowania']],
+ terms:[['mit','Opowieść porządkująca świat i uzasadniająca porządek społeczny. Nie jest fałszywą historią — jest innym gatunkiem wypowiedzi, sprawdzanym przez sens, nie przez źródło.'],
+        ['sacrum / profanum','To, co święte i wyłączone z codzienności, wobec tego, co zwyczajne i dostępne. Podział organizujący czas (święta), przestrzeń (świątynia) i zachowanie.'],
+        ['cywilizacja','Społeczeństwo z miastem, podziałem pracy, władzą ponadrodową i najczęściej pismem.'],
+        ['źródło historyczne','Każdy ślad przeszłości, na podstawie którego wnioskujemy o niej. Kluczowe pytanie brzmi nie „czy mówi prawdę", lecz „kto, do kogo i po co to napisał".'],
+        ['periodyzacja','Umowny podział dziejów na epoki. Narzędzie porządkujące, nie właściwość samego czasu.']],
+ ex:{type:'sort', q:'Rozdziel materiały wedle ich statusu poznawczego. To najważniejszy nawyk historyka: zanim uwierzysz w treść, ustal, czym jest tekst, który ją niesie.',
+     bins:[['src','Źródło pierwotne'],['stu','Opracowanie'],['int','Interpretacja / dzieło literackie']],
+     items:[['Kodeks Hammurabiego wyryty na steli','src'],
+            ['Inskrypcja nagrobna z rzymskiej Afryki','src'],
+            ['Moneta z podobizną Oktawiana Augusta','src'],
+            ['„Dzieje" Herodota','src'],
+            ['Hasło „hellenizm" w encyklopedii','stu'],
+            ['Uniwersytecki podręcznik historii Grecji','stu'],
+            ['Artykuł naukowy o datowaniu wojny trojańskiej','stu'],
+            ['„Eneida" Wergiliusza','int'],
+            ['Film „Aleksander" Olivera Stone\'a','int'],
+            ['Obraz Jacques-Louis Davida „Śmierć Sokratesa"','int']],
+     fb:{src:'Powstało w badanej epoce i było jej częścią. Uwaga: Herodot jest źródłem, choć bywa niedokładny — źródłowość to kwestia pochodzenia, nie wiarygodności.',
+         stu:'Powstało później i mówi <i>o</i> epoce. Ma aparat, przypisy i można je zweryfikować.',
+         int:'Też powstało o epoce, ale rządzi się prawem twórczej swobody. Eneida jest jednocześnie źródłem — do poznania czasów Augusta, nie czasów Eneasza.'}},
+ quiz:[{q:'Dlaczego umowną granicą prehistorii i historii jest pismo?',
+        o:['Bo dopiero wtedy ludzie zaczęli budować miasta','Bo od tego momentu przeszłość zostawia świadectwa mówiące własnym głosem','Bo wcześniejsze znaleziska się nie zachowały','Bo tak ustalił Herodot'],c:1,
+        e:'Miasta są starsze od pisma, a znaleziska sprzed pisma mamy w obfitości. Chodzi o rodzaj świadectwa: tekst mówi sam, warstwa archeologiczna wymaga, żeby ktoś ją zinterpretował.'},
+       {q:'„Dzieje" Herodota są dla nas przede wszystkim:',
+        o:['opracowaniem naukowym','źródłem pierwotnym','interpretacją literacką bez wartości poznawczej','dokumentem urzędowym'],c:1,
+        e:'Powstały w V w. p.n.e. i są częścią badanej epoki. To, że Herodot bywa łatwowierny, obniża jego wiarygodność, ale nie zmienia statusu tekstu jako źródła.'},
+       {q:'Rok 476 jako koniec starożytności to:',
+        o:['data odczuwana przez współczesnych jako przełom','umowna cezura wprowadzona przez późniejszych historyków','data zniszczenia Rzymu przez najeźdźców','rok śmierci ostatniego cesarza rzymskiego'],c:1,
+        e:'Rzym nie został wtedy zburzony, a Romulus Augustulus przeżył detronizację. Cezura jest wygodnym narzędziem porządkującym — dla ludzi żyjących w 476 roku nic się nie skończyło.'},
+       {q:'Zdanie „mit to po prostu nieprawdziwa historia" jest:',
+        o:['poprawne','błędne, bo miesza dwa różne gatunki wypowiedzi','poprawne tylko dla mitów greckich','błędne, bo mity są prawdziwe'],c:1,
+        e:'Mit i relacja historyczna odpowiadają na różne pytania i podlegają różnym kryteriom. Ocenianie mitu miarą faktograficzną to jak ocenianie wiersza miarą przydatności praktycznej.'}],
+ prompt:'Wskaż jedną rzecz, w którą wierzysz na temat przeszłości, i zapisz, skąd właściwie o niej wiesz. Źródło, opracowanie czy film?'
+},
+{
+ id:'m02', n:'II', k:'h', t:'Bliski Wschód — kolebka cywilizacji', when:'3200 – 330 p.n.e.', mins:20,
+ zone:[-3200,-330,'near'],
+ axis:'Pasmo Bliskiego Wschodu. Zwróć uwagę, jak długo trwa ta epoka w porównaniu z całą Grecją i Rzymem razem wziętymi.',
+ lead:`<p>Wszystko, co uważamy za greckie, ma starszego krewnego między Tygrysem a Eufratem.
+ Miasto, świątynia, król-pośrednik między bogiem a ludem, spisane prawo, epos, szkoła pisarzy,
+ rachuba czasu w systemie sześćdziesiątkowym — z którego do dziś mamy sześćdziesiąt minut
+ i trzysta sześćdziesiąt stopni.</p>
+ <p>Mezopotamia i Egipt wypracowały model, który nazywamy <em>despotią wschodnią</em>: władca
+ rozporządza pracą i życiem poddanych, bo pośredniczy w kontakcie z bogami. Piramida i zikkurat
+ to ten sam komunikat wyrażony w kamieniu i cegle — władza zdolna zorganizować dziesiątki
+ tysięcy ludzi wokół celu, który nie daje nikomu chleba.</p>
+ <p>Najważniejszy dla literatury jest <b>Epos o Gilgameszu</b>. Król Uruk traci przyjaciela
+ Enkidu, po raz pierwszy ogląda śmierć z bliska i rusza szukać nieśmiertelności. Nie znajduje
+ jej. Wraca do miasta i patrzy na mury, które zbudował — to one są jedyną odpowiedzią, jaką
+ dostaje. Cztery tysiące lat przed Horacym pojawia się myśl, że trwałe jest dzieło, nie ciało.
+ W tym samym eposie jest opowieść o potopie starsza od biblijnej i uderzająco do niej podobna.</p>`,
+ works:[['—','<i>Epos o Gilgameszu</i> — najstarszy epos świata, dwanaście tabliczek'],
+        ['—','<i>Kodeks Hammurabiego</i> — ok. 282 przepisy na diorytowej steli'],
+        ['—','<i>Księga Umarłych</i> — egipski zbiór formuł na drogę pozagrobową'],
+        ['Fenicjanie','alfabet spółgłoskowy — przodek greckiego, łacińskiego i naszego']],
+ terms:[['despotia wschodnia','Ustrój, w którym władca dysponuje życiem i pracą poddanych, a jego władza ma sankcję religijną.'],
+        ['politeizm','Wiara w wielu bogów, zwykle odpowiadających za wydzielone dziedziny świata.'],
+        ['zikkurat','Mezopotamska świątynia-schodkowa wieża; miejsce spotkania bóstwa z miastem.'],
+        ['pismo klinowe','Zapis znakami odciskanymi rylcem w glinie; od piktogramów po sylabariusz.'],
+        ['hieroglify','Egipskie pismo świętych znaków, łączące elementy obrazkowe, dźwiękowe i znaczeniowe.'],
+        ['zasada talionu','„Oko za oko" — kara odpowiadająca szkodzie. U Hammurabiego stopniowana wedle stanu społecznego sprawcy i ofiary.']],
+ ex:{type:'match', q:'Potop u Gilgamesza i potop w Księdze Rodzaju. Połącz motyw z jego wersją — a potem zastanów się, gdzie różnica jest większa niż podobieństwo.',
+     left:'Epos o Gilgameszu', right:'Księga Rodzaju',
+     pairs:[['Bogowie zsyłają potop, bo ludzie zbyt hałasują','Bóg zsyła potop, bo ziemia napełniła się nieprawością'],
+            ['Utnapisztim, ostrzeżony potajemnie przez Ea','Noe, ostrzeżony wprost przez Boga'],
+            ['Wypuszcza gołębicę, jaskółkę i kruka','Wypuszcza kruka, a potem trzykrotnie gołębicę'],
+            ['Arka osiada na górze Nisir','Arka osiada na górach Ararat'],
+            ['Bogowie zlatują się do ofiary jak muchy','Bóg czuje miłą woń i zawiera przymierze'],
+            ['Nagroda: nieśmiertelność dla jednego człowieka','Nagroda: przymierze z całą ludzkością, znak tęczy']],
+     note:'Zbieżność szczegółów jest zbyt duża na przypadek — obie opowieści wyrastają z tej samej mezopotamskiej tradycji. Różnica leży gdzie indziej: u Gilgamesza potop jest kaprysem rozdrażnionych bogów, w Rdz — wyrokiem moralnym. To ta zmiana, a nie fabuła, jest właściwą treścią monoteizmu.'},
+ quiz:[{q:'Co Gilgamesz przynosi z wyprawy po nieśmiertelność?',
+        o:['Ziele młodości, które zjada','Nic — ale wraca do miasta i patrzy na jego mury','Nieśmiertelność, ale traci przyjaciela','Wyrocznię o dniu własnej śmierci'],c:1,
+        e:'Ziele odbiera mu wąż. Epos kończy się na murach Uruk: trwa dzieło, nie człowiek — myśl, którą po wiekach powtórzy Horacjańskie „exegi monumentum".'},
+       {q:'Kodeks Hammurabiego jest ważny przede wszystkim dlatego, że:',
+        o:['zawiera pierwsze prawa w dziejach','jest prawem spisanym i publicznie wystawionym','znosi karę śmierci','wprowadza równość wobec prawa'],c:1,
+        e:'Prawa istniały wcześniej, a kodeks wyraźnie różnicuje kary wedle stanu. Przełomem jest to, że prawo zostaje wyjęte z pamięci urzędnika i wystawione na widok publiczny.'},
+       {q:'Wynalazek alfabetu przypisuje się:',
+        o:['Sumerom','Egipcjanom','Fenicjanom','Hetytom'],c:2,
+        e:'Fenicki alfabet spółgłoskowy zastąpił setki znaków dwudziestoma kilkoma. Grecy dołożyli do niego samogłoski i tak powstało pismo, którym piszemy do dziś.'},
+       {q:'Podobieństwo opisów potopu w Gilgameszu i Księdze Rodzaju najlepiej tłumaczy:',
+        o:['przypadkowa zbieżność uniwersalnych lęków','wspólne mezopotamskie podłoże obu tradycji','zapożyczenie z Gilgamesza przez Greków','późniejsza chrześcijańska redakcja eposu'],c:1,
+        e:'Zbieżność sięga szczegółów — wypuszczanych ptaków i ofiary po zejściu z arki. Wskazuje to na wspólne źródło kulturowe, w którym obie opowieści zanurzone są od początku.'}],
+ prompt:'Gilgamesz przegrywa z własną śmiertelnością i dostaje w zamian mury miasta. Co według Ciebie jest dziś odpowiednikiem tych murów?'
+},
+{
+ id:'m03', n:'III', k:'l', t:'Biblia — Stary Testament', when:'ok. 1200 – 100 p.n.e.', mins:20,
+ zone:[-2000,-100,'near'],
+ axis:'Pasmo Bliskiego Wschodu i Izraela: Abraham, Exodus, Dawid, Salomon, niewola babilońska.',
+ lead:`<p>Stary Testament nie jest książką, tylko biblioteką — kilkadziesiąt tekstów powstających
+ przez blisko tysiąc lat, w trzech językach, w gatunkach od kroniki po poemat miłosny. Kanon
+ hebrajski dzieli je na trzy części: <b>Torę</b> (Pięcioksiąg), <b>Proroków</b> i <b>Pisma</b>.
+ Kto zna ten podział, przestaje się gubić.</p>
+ <p>Osią całości jest <em>przymierze</em>: umowa między Bogiem a ludem, z warunkami i sankcją.
+ To pomysł ustrojowy, nie tylko religijny — relacja z Bogiem zostaje ujęta w kategoriach prawnych,
+ a Dekalog jest jej zapisem. Konsekwencja jest ogromna: skoro obowiązuje prawo, obowiązuje też
+ króla. Prorok, który w imię przymierza wygarnia władcy, nie ma odpowiednika w Mezopotamii.</p>
+ <p>Najciekawsze literacko są jednak księgi, które z tym porządkiem <b>się spierają</b>.
+ Hiob traci wszystko, choć jest sprawiedliwy, i nie przyjmuje tłumaczeń przyjaciół. Kohelet
+ patrzy na świat i mówi: marność. Pieśń nad Pieśniami to jawnie erotyczny poemat, który
+ tradycja odczyta alegorycznie. Kanon zachował własną opozycję — i to jest miara jego powagi.</p>`,
+ works:[['Księga Rodzaju','stworzenie, raj, Kain i Abel, potop, wieża Babel — zestaw archetypów Zachodu'],
+        ['Księga Hioba','poemat o cierpieniu niezawinionym i o milczeniu Boga'],
+        ['Księga Koheleta','<i>vanitas vanitatum</i> — wszystko marność; źródło toposu <i>ubi sunt</i>'],
+        ['Pieśń nad Pieśniami','poemat miłosny czytany alegorycznie'],
+        ['Psalmy','150 pieśni: błagalne, dziękczynne, pochwalne, mądrościowe']],
+ terms:[['przymierze','Umowa Boga z ludem: obietnica w zamian za wierność prawu. Model relacji ujęty w kategoriach prawnych.'],
+        ['dekalog','Dziesięć przykazań — rdzeń prawa przymierza, przekazany na Synaju.'],
+        ['styl biblijny','Prostota składni, parataksa („i…, i…"), paralelizm członów, powtórzenie, obrazowość, liczba symboliczna.'],
+        ['parabola','Przypowieść: krótka opowieść, w której sens dosłowny jest tylko nośnikiem sensu przenośnego.'],
+        ['archetyp','Prawzór postaci lub sytuacji, powracający w kulturze: Kain, potop, wieża Babel, Hiob.'],
+        ['monoteizm','Wiara w jednego Boga, wykluczająca innych — nie tylko liczbowa, ale i moralna rewolucja.']],
+ ex:{type:'sort', q:'Ułóż kanon hebrajski. Trzy części, w tej kolejności, w jakiej ukształtowała je tradycja żydowska.',
+     bins:[['tora','Tora — Pięcioksiąg'],['newiim','Prorocy'],['ketuwim','Pisma']],
+     items:[['Księga Rodzaju','tora'],['Księga Wyjścia','tora'],['Księga Powtórzonego Prawa','tora'],
+            ['Księga Jozuego','newiim'],['Księgi Królewskie','newiim'],['Księga Izajasza','newiim'],
+            ['Księga Jeremiasza','newiim'],['Psalmy','ketuwim'],['Księga Hioba','ketuwim'],
+            ['Księga Koheleta','ketuwim'],['Pieśń nad Pieśniami','ketuwim']],
+     fb:{tora:'Pięć ksiąg prawa i początków: od stworzenia po śmierć Mojżesza.',
+         newiim:'Uwaga na pułapkę: Jozue i Księgi Królewskie to „prorocy wcześniejsi" — narracja historyczna, nie zbiór proroctw.',
+         ketuwim:'Najbardziej zróżnicowana część: liryka, mądrość, spór z porządkiem. Tu mieszkają Hiob i Kohelet.'}},
+ quiz:[{q:'Kanon hebrajski dzieli się na:',
+        o:['Prawo, Ewangelie i Listy','Torę, Proroków i Pisma','Księgi historyczne, prorockie i apokryfy','Stary i Nowy Testament'],c:1,
+        e:'Trójpodział Tora – Newiim – Ketuwim; od pierwszych liter powstał skrót Tanach.'},
+       {q:'Księga Hioba stawia pytanie o:',
+        o:['pochodzenie zła w świecie stworzonym przez dobrego Boga','historię wyjścia z Egiptu','zasady kultu świątynnego','genealogię królów Izraela'],c:0,
+        e:'To klasyczna teodycea. Znamienne, że księga nie daje odpowiedzi wyjaśniającej — Bóg odpowiada z wichru pytaniem, nie tłumaczeniem.'},
+       {q:'Cechą stylu biblijnego NIE jest:',
+        o:['paralelizm członów','rozbudowana hipotaksa z okresami warunkowymi','powtórzenie i liczba symboliczna','obrazowość i prostota składni'],c:1,
+        e:'Rozbudowane okresy zdaniowe to cecha prozy retorycznej Cycerona, nie stylu biblijnego, który buduje zdanie przez nawlekanie („i…, i…").'},
+       {q:'Księga Koheleta jest źródłem toposu:',
+        o:['carpe diem','ubi sunt','deus ex machina','aurea mediocritas'],c:1,
+        e:'„Gdzież są ci, którzy byli przed nami" — pytanie o przemijanie. Trzy pozostałe toposy pochodzą z tradycji grecko-rzymskiej.'}],
+ prompt:'Hiob nie przyjmuje wyjaśnień przyjaciół, choć są one poprawne teologicznie. Dlaczego, Twoim zdaniem, księga przyznaje rację jemu, a nie im?'
+},
+{
+ id:'m04', n:'IV', k:'l', t:'Biblia — Nowy Testament', when:'ok. 30 – 100 n.e.', mins:20,
+ zone:[-10,120,'chri'],
+ axis:'Pasmo chrześcijaństwa. Zauważ odstęp: między ukrzyżowaniem a spisaniem Ewangelii mija pokolenie.',
+ lead:`<p>Nowy Testament powstaje w greckim <em>koine</em> — języku ulicy całego Wschodu — przez
+ mniej więcej pół wieku. Najstarsze są Listy Pawła, nie Ewangelie: pierwsze teksty chrześcijaństwa
+ to korespondencja robocza z konkretnymi gminami, pisana wtedy, gdy nikt jeszcze nie wiedział,
+ że tworzy Pismo.</p>
+ <p>Ewangelia znaczy „dobra nowina". Trzy pierwsze — Marka, Mateusza, Łukasza — nazywamy
+ synoptycznymi, bo dają się zestawić w kolumnach i widać w nich wspólny materiał. Jan jest inny:
+ bardziej refleksyjny, teologiczny, zaczyna od Logosu, nie od genealogii.</p>
+ <p>Narzędziem nauczania jest <b>przypowieść</b>. Jej siła polega na tym, że nie mówi wprost:
+ słuchacz sam musi wykonać przeskok od obrazu do sensu — i dlatego zapamiętuje. Kto raz usłyszał
+ o synu marnotrawnym, nie potrzebuje wykładu o łasce. Osobnym biegunem jest Apokalipsa: wizja
+ zbudowana z symboli i liczb, pisana w czasie prześladowań językiem, który rozumieli swoi,
+ a nie donosiciel.</p>`,
+ works:[['Ewangelie','Marka, Mateusza, Łukasza (synoptyczne) oraz Jana'],
+        ['Dzieje Apostolskie','historia pierwszej gminy i podróży misyjnych Pawła'],
+        ['św. Paweł','Listy — najstarsza warstwa Nowego Testamentu; <i>Hymn o miłości</i> (1 Kor 13)'],
+        ['—','<i>Kazanie na Górze</i> (Mt 5–7) z ośmioma błogosławieństwami'],
+        ['św. Jan','<i>Apokalipsa</i> — wizja końca w kodzie symbolicznym']],
+ terms:[['ewangelia','Dosłownie „dobra nowina"; gatunek łączący relację, mowę i wyznanie wiary.'],
+        ['apostoł','Posłany — świadek, którego zadaniem jest przekazać, nie stworzyć naukę.'],
+        ['apokalipsa','Objawienie: gatunek wizyjny o sensie dziejów, pisany kodem zrozumiałym dla wtajemniczonych.'],
+        ['symbolika liczb','7 — pełnia; 12 — lud wybrany i apostołowie; 3 — Bóg; 666 — bestia; 1000 — czas długi, nie policzalny.'],
+        ['przypowieść','Obraz z życia codziennego niosący sens religijny; wymaga od słuchacza samodzielnego przeskoku.'],
+        ['koine','Uproszczona greka epoki hellenistycznej — wspólny język Wschodu i pierwszy język chrześcijaństwa.']],
+ ex:{type:'match', q:'Połącz przypowieść z jej sensem przenośnym. To ćwiczenie z odróżniania warstwy dosłownej od naddanej — czyli z tego, na czym stoi cała analiza literacka.',
+     left:'Przypowieść', right:'Sens przenośny',
+     pairs:[['O siewcy','Słowo pada na różne typy słuchaczy i tylko część wydaje owoc'],
+            ['O synu marnotrawnym','Powrót i przebaczenie są ważniejsze od rachunku win'],
+            ['O miłosiernym Samarytaninie','Bliźnim jest ten, kto okazał miłosierdzie — nie ten, kto jest swój'],
+            ['O talentach','Odpowiedzialność za to, co powierzone; zakopanie daru jest winą'],
+            ['O robotnikach w winnicy','Sprawiedliwość Boga nie jest arytmetyką zasług']],
+     note:'W każdej z nich obraz jest zwyczajny — pole, ojciec, droga, pieniądze, praca najemna — a sens dotyczy porządku ostatecznego. Ta rozpiętość między banałem obrazu a wagą sensu jest istotą paraboli.'},
+ quiz:[{q:'Najstarszą warstwą Nowego Testamentu są:',
+        o:['Ewangelia Marka','Listy św. Pawła','Ewangelia Jana','Apokalipsa'],c:1,
+        e:'Listy powstają w latach 50. n.e., Ewangelie od ok. 70. Pierwsze teksty chrześcijaństwa to praktyczna korespondencja z gminami.'},
+       {q:'Ewangelie synoptyczne to:',
+        o:['Mateusza, Marka, Łukasza','Mateusza, Marka, Jana','Łukasza, Jana, Marka','wszystkie cztery'],c:0,
+        e:'Dają się zestawić „jednym spojrzeniem" (gr. synopsis) w równoległych kolumnach. Jan ma odrębną kompozycję i język.'},
+       {q:'Liczba 7 w Apokalipsie oznacza przede wszystkim:',
+        o:['siedem dni tygodnia','pełnię i doskonałość','liczbę Kościołów Azji Mniejszej','siedem grzechów głównych'],c:1,
+        e:'Warstwa dosłowna — siedem gmin — istnieje, ale nośnikiem sensu jest symbolika pełni. Siedem grzechów głównych to koncept znacznie późniejszy.'},
+       {q:'Hymn o miłości (1 Kor 13) mówi, że największa jest:',
+        o:['wiara','nadzieja','miłość','pokora'],c:2,
+        e:'„Tak więc trwają wiara, nadzieja, miłość — te trzy: z nich zaś największa jest miłość". Grecki termin to agape, miłość ofiarna, nie eros.'}],
+ prompt:'Wybierz jedną przypowieść i przełóż ją na dzisiejsze realia, zachowując strukturę: zwykły obraz — nieoczywisty wniosek.'
+},
+{
+ id:'m05', n:'V', k:'l', t:'Mit i epos grecki', when:'VIII w. p.n.e.', mins:20,
+ zone:[-1300,-650,'grec'],
+ axis:'Pasmo Grecji i pasmo dzieł. Zwróć uwagę: wieki ciemne, a zaraz po nich spisanie eposów — pamięć ustna dojrzewa w epoce bez pisma.',
+ lead:`<p>Mitologia grecka nie jest zbiorem bajek, tylko <b>systemem</b>. Bogowie mają genealogię,
+ kompetencje i konflikty; świat ma początek i porządek; człowiek ma w tym wszystkim wyznaczone
+ miejsce — poniżej bogów, powyżej zwierząt, ze śmiercią jako granicą. Hezjod w <i>Teogonii</i>
+ porządkuje to genealogicznie, a w <i>Pracach i dniach</i> dokłada wymiar moralny: cztery wieki
+ od złotego do żelaznego, czyli teorię upadku.</p>
+ <p>Epos powstawał wcześniej niż pismo. Aojdowie śpiewali go z pamięci przy formingsie, a techniki,
+ które dziś nazywamy środkami stylistycznymi, były przede wszystkim <em>narzędziami pamięci</em>.
+ Stały epitet — „prędkonogi Achilles", „różanopalca Jutrzenka" — to gotowy klocek pasujący do miary
+ wiersza. Porównanie homeryckie daje śpiewakowi chwilę oddechu i czas na przypomnienie sobie dalszego
+ ciągu. Retardacja opóźnia rozwiązanie i trzyma słuchacza. Nic z tego nie jest ozdobą; to
+ inżynieria ustnego przekazu.</p>
+ <p>Obie epopeje zaczynają się <em>in medias res</em> i od inwokacji — wezwania Muzy, które
+ jednocześnie podaje temat. Iliada mówi o gniewie, Odyseja o mężu i powrocie. Cała reszta jest
+ rozwinięciem tego pierwszego słowa.</p>`,
+ works:[['Homer','<i>Iliada</i> — pięćdziesiąt dni ostatniego roku wojny trojańskiej'],
+        ['Homer','<i>Odyseja</i> — dziesięć lat powrotu; spryt zamiast siły'],
+        ['Hezjod','<i>Teogonia</i> — genealogia bogów; <i>Prace i dnie</i> — cztery wieki ludzkości'],
+        ['Jan Parandowski','<i>Mitologia</i> — dwudziestowieczne opracowanie, nie źródło']],
+ terms:[['epos','Rozbudowany utwór wierszowany o bohaterskiej przeszłości, z narratorem wszechwiedzącym i inwokacją.'],
+        ['heksametr','Sześciostopowy wiersz daktyliczny; daktyl (–∪∪) wymienny ze spondejem (– –), ostatnia stopa skrócona.'],
+        ['inwokacja','Rozbudowane wezwanie Muzy otwierające epos; podaje jednocześnie temat utworu.'],
+        ['epitet stały','Przydawka na trwałe zrośnięta z postacią: „prędkonogi Achilles". Narzędzie pamięci i miary.'],
+        ['porównanie homeryckie','Porównanie rozbudowane w samodzielny obrazek, zwykle z życia pasterzy lub rolników.'],
+        ['retardacja','Celowe opóźnienie akcji dygresją lub opisem, budujące napięcie.'],
+        ['in medias res','Rozpoczęcie w środku wydarzeń, z wcześniejszymi zdarzeniami podanymi wstecz.'],
+        ['aojda','Wędrowny śpiewak epicki, wykonujący utwór z pamięci przy akompaniamencie.']],
+ ex:{type:'hex', q:'Heksametr daktyliczny: sześć stóp. Pierwsze cztery mogą być daktylem (–∪∪) albo spondejem (– –), piąta niemal zawsze jest daktylem, szósta zawsze skrócona. Zbuduj poprawny wers, klikając w stopy.',
+     note:'Grecki wiersz opierał się na <b>iloczasie</b> — długości sylab, nie na akcencie. Polszczyzna iloczasu nie ma, więc nasze przekłady zastępują go akcentem, a heksametr brzmi u nas inaczej niż brzmiał w Atenach.',
+     quote:'Achilla śpiewaj, Muzo, gniew obfity w szkody',
+     qsrc:'Homer, <i>Iliada</i>, ks. I, przeł. Franciszek Ksawery Dmochowski (1800–1801) — domena publiczna'},
+ quiz:[{q:'Inwokacja w eposie pełni funkcję:',
+        o:['wyłącznie ozdobną','wezwania Muzy i zarazem podania tematu','streszczenia całej fabuły','modlitwy przed rozpoczęciem pracy'],c:1,
+        e:'Pierwsze słowo Iliady to „gniew", pierwsze słowo Odysei to „mąż". Inwokacja jest jednocześnie apostrofą i zapowiedzią tematu.'},
+       {q:'Stały epitet powstał przede wszystkim jako:',
+        o:['ozdobnik stylistyczny','narzędzie ułatwiające zapamiętanie i wypełnienie miary wiersza','sposób odróżniania bogów od ludzi','wymóg gramatyki greckiej'],c:1,
+        e:'Epos był przekazywany ustnie. Gotowa formuła pasująca do miary wiersza to dla aojdy klocek, z którego buduje wers w trakcie wykonania.'},
+       {q:'Rozpoczęcie „in medias res" oznacza, że utwór:',
+        o:['zaczyna się od opisu przyrody','zaczyna się w środku wydarzeń','kończy się bez rozwiązania','opowiada wydarzenia w porządku chronologicznym'],c:1,
+        e:'Iliada zaczyna się w dziesiątym roku wojny, Odyseja pod koniec tułaczki. Wcześniejsze zdarzenia poznajemy z retrospekcji.'},
+       {q:'Heksametr grecki opierał się na:',
+        o:['liczbie sylab','akcencie wyrazowym','iloczasie, czyli długości sylab','rymie końcowym'],c:2,
+        e:'Rym w poezji antycznej nie występuje, a akcent to zasada wiersza polskiego. Grecki wers organizowała długość sylab — czego polszczyzna nie potrafi oddać wprost.'}],
+ prompt:'Wymyśl stały epitet dla trzech osób lub rzeczy z Twojego otoczenia. Musi być krótki, powtarzalny i trafny — dokładnie jak u Homera.'
+},
+{
+ id:'m06', n:'VI', k:'l', t:'Liryka grecka i rzymska', when:'VII w. p.n.e. – 8 n.e.', mins:20,
+ zone:[-650,10,'work'],
+ axis:'Pasmo dzieł: od Safony po Pieśni Horacego. Liryka wchodzi tam, gdzie epos przestaje wystarczać.',
+ lead:`<p>Epos mówi „oni". Liryka mówi „ja" — i to jest cała rewolucja. Kiedy Archiloch przyznaje,
+ że rzucił tarczę i uciekł, a przeżył, robi coś, czego bohater Homera nie mógłby zrobić: stawia
+ własne doświadczenie ponad kodeks.</p>
+ <p>Grecy wypracowali repertuar postaw. Tyrtajos — obywatelska zachęta do walki. Safona — namiętność
+ opisana od środka, wraz z objawami fizycznymi. Anakreont — biesiada, wino, lekkość. Pindar —
+ uroczysta oda na cześć zwycięzcy. Symonides z Keos — epigramat, sztuka zmieszczenia sensu w dwóch
+ wersach; tradycja przypisuje mu również wynalezienie <em>sztuki pamięci</em>, o której będzie mowa
+ w ostatnim module.</p>
+ <p>Rzymianie te formy przejmują i przetwarzają. Katullus pisze krótko i gwałtownie („nienawidzę
+ i kocham"). <b>Horacy</b> tworzy z nich system: <i>carpe diem</i> — chwytaj dzień, bo jutro jest
+ niepewne; <i>aurea mediocritas</i> — złoty środek między nędzą a przepychem; <i>non omnis moriar</i> —
+ nie wszystek umrę, bo zostaje wiersz. To ostatnie zdanie okaże się jedną z najtrwalszych obietnic
+ w dziejach literatury: powtórzą je Kochanowski, Mickiewicz, Puszkin i dziesiątki innych.</p>`,
+ works:[['Tyrtajos','elegie wzywające do obrony ojczyzny'],
+        ['Safona','liryka miłosna; strofa saficka'],
+        ['Anakreont','pieśni biesiadne — stąd „anakreontyk"'],
+        ['Pindar','ody na cześć zwycięzców igrzysk (epinikia)'],
+        ['Symonides z Keos','epigramaty, m.in. na poległych pod Termopilami'],
+        ['Katullus','krótkie wiersze osobiste, <i>Odi et amo</i>'],
+        ['Horacy','<i>Pieśni</i> — <i>Exegi monumentum</i>, <i>Do Leukonoe</i>; <i>Sztuka poetycka</i>']],
+ terms:[['liryka bezpośrednia','„Ja" mówi wprost o własnych uczuciach.'],
+        ['liryka pośrednia','Uczucie wyrażone przez opis, sytuację lub maskę postaci.'],
+        ['oda','Utwór uroczysty, wysokiego stylu, sławiący osobę, ideę lub wydarzenie.'],
+        ['epigramat','Krótki utwór zakończony wyrazistą puentą; pierwotnie napis nagrobny.'],
+        ['horacjanizm','Postawa oparta na umiarze, dystansie i pochwale spokojnego życia.'],
+        ['aurea mediocritas','Złoty środek — unikanie skrajności jako zasada życia i stylu.'],
+        ['carpe diem','„Chwytaj dzień" — korzystaj z chwili, bo przyszłość jest niepewna.'],
+        ['non omnis moriar','„Nie wszystek umrę" — poeta trwa w dziele. Topos nieśmiertelności przez sztukę.']],
+ ex:{type:'match', q:'Dopasuj sentencję do postawy, którą wyraża. Uwaga: dwie z nich bywają mylone, bo obie mówią o czasie — ale mówią coś przeciwnego.',
+     left:'Formuła', right:'Postawa',
+     pairs:[['carpe diem','Korzystaj z chwili, bo jutra nie masz zagwarantowanego'],
+            ['non omnis moriar','Ciało przeminie, ale dzieło zostanie i to wystarczy'],
+            ['aurea mediocritas','Unikaj skrajności — ani nędza, ani przepych'],
+            ['ubi sunt','Gdzie są ci, którzy byli przed nami? Rozpamiętywanie przemijania'],
+            ['exegi monumentum','Zbudowałem pomnik trwalszy niż ze spiżu — świadoma duma twórcy']],
+     note:'<i>Carpe diem</i> i <i>non omnis moriar</i> to dwie różne odpowiedzi na tę samą świadomość śmierci: pierwsza sięga po chwilę, druga po trwałość dzieła. Obie u Horacego, w odstępie kilku ksiąg.'},
+ quiz:[{q:'Sformułowanie „non omnis moriar" pochodzi z:',
+        o:['Pieśni Horacego','Eneidy Wergiliusza','Metamorfoz Owidiusza','Mów Cycerona'],c:0,
+        e:'Z pieśni III 30, tej samej, która zaczyna się od „exegi monumentum aere perennius". W polszczyźnie odbił ją Kochanowski, a potem Mickiewicz.'},
+       {q:'Który poeta jest twórcą liryki biesiadnej, od którego nazwiska nazwano cały gatunek?',
+        o:['Pindar','Anakreont','Tyrtajos','Symonides'],c:1,
+        e:'Anakreontyk — lekki wiersz o winie, miłości i uciechach. Pindar pisał ody zwycięskie, Tyrtajos elegie wojenne.'},
+       {q:'„Aurea mediocritas" oznacza:',
+        o:['złotą przeciętność w sensie negatywnym','umiar jako zasadę życia','średni poziom wykształcenia','złoty wiek literatury'],c:1,
+        e:'To pochwała, nie zarzut. Dzisiejsze pejoratywne znaczenie słowa „mierność" zaciemnia sens oryginału.'},
+       {q:'Rewolucyjność liryki wobec eposu polega na:',
+        o:['zmianie miary wierszowej','przejściu od „oni" do „ja"','porzuceniu tematyki mitologicznej','wprowadzeniu rymu'],c:1,
+        e:'Rym w antyku nie występuje, a mity pozostają obecne. Nowością jest podmiot mówiący o sobie i stawiający własne doświadczenie w centrum.'}],
+ prompt:'Którą z postaw — carpe diem czy non omnis moriar — uznajesz za bliższą sobie i dlaczego? Odpowiedz w dwóch zdaniach.'
+},
+{
+ id:'m07', n:'VII', k:'l', t:'Teatr i dramat grecki', when:'VI – IV w. p.n.e.', mins:20,
+ zone:[-534,-380,'grec'],
+ axis:'Pasmo Grecji i pasmo dzieł: Oresteja, Antygona, Król Edyp, Medea — cztery dekady, w których powstaje europejski dramat.',
+ lead:`<p>Teatr wyrósł z obrzędu. Podczas Wielkich Dionizjów chór śpiewał dytyramb ku czci
+ Dionizosa; w pewnym momencie ktoś wystąpił z chóru i odpowiedział mu — i tak narodził się
+ dialog. Ajschylos dołożył drugiego aktora, Sofokles trzeciego. Więcej nie było potrzeba:
+ trzej aktorzy w maskach obsługiwali wszystkie role.</p>
+ <p>Przedstawienie odbywało się w dzień, pod gołym niebem, w ramach konkursu, przy kilkunastu
+ tysiącach widzów. Stąd konwencje: maska niosąca typ i wzmacniająca głos, koturny podwyższające
+ sylwetkę, brak przemocy na scenie — o zabójstwie opowiada posłaniec. To nie ubóstwo środków,
+ tylko wybór: tragedia gra tym, co widz sobie wyobrazi.</p>
+ <p>Istotą tragedii jest <b>konflikt tragiczny</b>: zderzenie dwóch racji, z których obie są
+ słuszne, i wybór między nimi zawsze oznacza winę. Antygona ma rację jako siostra i wobec prawa
+ boskiego, Kreon ma rację jako władca odpowiedzialny za miasto. Nie ma dobrego wyjścia — i właśnie
+ dlatego to tragedia, a nie melodramat z czarnym charakterem. Arystoteles w <i>Poetyce</i> dopisał
+ do tego teorię: <em>hamartia</em>, czyli błąd bohatera, prowadzi do <em>katharsis</em> —
+ oczyszczenia widza przez litość i trwogę.</p>
+ <p class="ex hint" style="margin-top:14px">Uwaga na częsty błąd: <b>trzy jedności</b> to
+ kodyfikacja renesansowa. Arystoteles wymaga jedności akcji, o czasie wspomina mimochodem,
+ a o jedności miejsca nie pisze wcale.</p>`,
+ works:[['Ajschylos','<i>Oresteja</i> — jedyna zachowana trylogia; <i>Prometeusz w okowach</i>'],
+        ['Sofokles','<i>Antygona</i>, <i>Król Edyp</i>'],
+        ['Eurypides','<i>Medea</i> — psychologia i namiętność zamiast fatum'],
+        ['Arystofanes','komedia polityczna: <i>Chmury</i>, <i>Żaby</i>'],
+        ['Arystoteles','<i>Poetyka</i> — pierwsza teoria literatury Zachodu']],
+ terms:[['tragedia','Utwór o nieuchronnym upadku bohatera uwikłanego w konflikt racji równorzędnych.'],
+        ['katharsis','Oczyszczenie widza przez wzbudzenie litości i trwogi.'],
+        ['hamartia','Błąd bohatera — pomyłka w rozpoznaniu sytuacji, nie moralna nikczemność.'],
+        ['fatum','Przeznaczenie, którego nie da się ominąć; próba ucieczki je wypełnia.'],
+        ['ironia tragiczna','Widz wie więcej niż bohater, więc słowa postaci znaczą coś innego, niż ona sądzi.'],
+        ['konflikt tragiczny','Zderzenie dwóch równorzędnych racji; każdy wybór pociąga winę.'],
+        ['trzy jedności','Akcji, czasu i miejsca. Jedność akcji pochodzi od Arystotelesa, komplet — od teoretyków renesansu.'],
+        ['decorum','Zasada stosowności: styl, temat i postać muszą do siebie pasować.'],
+        ['chór','Zbiorowy uczestnik akcji: komentuje, ostrzega, reprezentuje wspólnotę.'],
+        ['stasimon','Pieśń chóru między epizodami.'],
+        ['epejsodion','Część dialogowa między pieśniami chóru — zalążek dzisiejszego aktu.']],
+ ex:{type:'theatre', q:'Kliknij części teatru greckiego, żeby poznać ich funkcję. Potem uruchom maszynę konfliktu i sprawdź, czy potrafisz obronić obie strony sporu Antygony z Kreonem.',
+     zones:[['theatron','Theatron','Widownia wykuta w zboczu wzgórza, na kilkanaście tysięcy miejsc. Akustyka naturalna — z ostatniego rzędu słychać szept z orchestry.'],
+            ['orchestra','Orchestra','Okrągły plac dla chóru, z ołtarzem Dionizosa (thymele) pośrodku. To tutaj, nie na scenie, bije serce przedstawienia.'],
+            ['skene','Skene','Budynek za orchestrą: garderoba i zarazem tło akcji. Od jego nazwy pochodzi nasza „scena".'],
+            ['parodos','Parodos','Boczne przejścia, którymi wchodził chór. Także nazwa jego pierwszej pieśni.'],
+            ['proskenion','Proskenion','Podwyższenie przed skene, na którym grali aktorzy — z czasem coraz ważniejsze kosztem orchestry.']],
+     duel:{t:'Maszyna konfliktu tragicznego — Antygona',
+           a:{n:'Antygona',pts:['Prawo boskie nakazuje pochować zmarłego i jest starsze od każdego edyktu',
+                                'Polinejkes jest jej bratem — więź krwi nie znika przez wyrok',
+                                'Człowiek odpowiada przed sumieniem, nie przed dekretem',
+                                'Odmowa pogrzebu karze zmarłego, który nic już nie może odpokutować']},
+              b:{n:'Kreon',pts:['Polinejkes zbrojnie napadł własne miasto — to zdrada, nie nieporozumienie',
+                                'Władca odpowiada za wspólnotę, a nie za uczucia jednej rodziny',
+                                'Prawo, od którego robi się wyjątek dla bliskich, przestaje być prawem',
+                                'Ustępstwo wobec buntu w mieście po wojnie domowej zaprasza kolejny']},
+           k:'Obie kolumny są prawdziwe. Gdyby jedna z nich była fałszywa, mielibyśmy melodramat: dobrą bohaterkę i złego tyrana. Tragedia zaczyna się dokładnie tam, gdzie racja jest po obu stronach, a wybór trzeba podjąć mimo to.'}},
+ quiz:[{q:'Katharsis to według Arystotelesa:',
+        o:['ukaranie bohatera za winę','oczyszczenie widza przez litość i trwogę','moment rozpoznania prawdy przez bohatera','pieśń chóru kończąca tragedię'],c:1,
+        e:'Efekt zachodzi po stronie widza, nie bohatera. Rozpoznanie prawdy to anagnorisis, a pieśń chóru to stasimon.'},
+       {q:'Trzy jedności — akcji, czasu i miejsca — pochodzą:',
+        o:['w całości z Poetyki Arystotelesa','od teoretyków renesansu, którzy rozbudowali Arystotelesa','od Sofoklesa','z praktyki Wielkich Dionizjów'],c:1,
+        e:'Arystoteles wymaga jedności akcji i wspomina o czasie; jedności miejsca nie formułuje. Komplet trzech reguł to dzieło XVI-wiecznych komentatorów.'},
+       {q:'Konflikt tragiczny polega na tym, że:',
+        o:['dobry bohater ginie z ręki złego','bohater walczy z przeznaczeniem','obie strony mają rację i każdy wybór oznacza winę','bohater popełnia zbrodnię i ponosi karę'],c:2,
+        e:'Gdyby jedna strona była zwyczajnie zła, byłby to melodramat. Tragizm bierze się z równorzędności racji.'},
+       {q:'Ironia tragiczna zachodzi wtedy, gdy:',
+        o:['bohater kpi z bogów','widz wie więcej niż bohater','chór mówi coś przeciwnego niż myśli','autor ośmiesza postać'],c:1,
+        e:'Klasyczny przykład: Edyp przeklina zabójcę Lajosa, nie wiedząc, że przeklina siebie. Widz zna rozwiązanie, bohater nie.'}],
+ prompt:'Opisz sytuację — z historii, z lektury lub z życia — w której obie strony miały rację i wybór musiał kogoś skrzywdzić.'
+},
+{
+ id:'m08', n:'VIII', k:'p', t:'Filozofia antyczna', when:'VI w. p.n.e. – II w. n.e.', mins:20,
+ zone:[-600,180,'work'],
+ axis:'Belki życiorysów: Sokrates, Platon, Arystoteles, Epikur — cztery pokolenia, w których powstaje szkielet myślenia Zachodu.',
+ lead:`<p>Filozofia zaczyna się od jednego gestu: zamiast pytać, który bóg zsyła burzę, Tales pyta,
+ z czego jest świat. Odpowiedź — woda — jest błędna. Pytanie jest przełomowe, bo zakłada, że świat
+ ma zrozumiałą zasadę i można jej szukać rozumem. Heraklit doda, że wszystko płynie, Pitagoras,
+ że rzeczywistość ma strukturę liczbową, Demokryt — że składa się z atomów.</p>
+ <p>Sofiści przenoszą pytanie na człowieka i uczą skutecznego przekonywania — Protagoras twierdzi,
+ że „człowiek jest miarą wszechrzeczy". Sokrates się temu przeciwstawia: skuteczność nie jest
+ prawdą. Nie pisze nic, chodzi po Atenach i pyta, aż rozmówca sam odkryje, że nie wie tego, co
+ zdawało mu się oczywiste. Za to zostaje skazany na śmierć przez sąd demokratyczny.</p>
+ <p>Platon buduje z tego system: prawdziwie istnieją idee, świat zmysłowy jest ich cieniem —
+ obraz jaskini z <i>Państwa</i> jest najsłynniejszą metaforą w dziejach filozofii. Arystoteles
+ sprowadza idee z powrotem na ziemię: forma tkwi w rzeczy, a cnota jest sprawnością wypracowaną
+ przez ćwiczenie i leży pośrodku między dwiema skrajnościami. Epoka hellenistyczna pyta już
+ tylko o jedno: <b>jak żyć</b>. Stoicy — zgodnie z rozumem, przyjmując to, co niezależne od nas.
+ Epikurejczycy — unikając cierpienia i lęku. Cynicy — odrzucając konwencje.</p>`,
+ works:[['Platon','<i>Państwo</i> (mit jaskini), <i>Uczta</i>, <i>Obrona Sokratesa</i>'],
+        ['Arystoteles','<i>Etyka nikomachejska</i>, <i>Polityka</i>, <i>Poetyka</i>'],
+        ['Epikur','<i>List do Menojkeusa</i> — o szczęściu i o śmierci'],
+        ['Seneka','<i>Listy moralne do Lucyliusza</i>'],
+        ['Marek Aureliusz','<i>Rozmyślania</i> — dziennik cesarza-stoika'],
+        ['Lukrecjusz','<i>O naturze rzeczy</i> — epikureizm w poemacie']],
+ terms:[['idea','U Platona: byt prawdziwy, wieczny i niezmienny, którego rzeczy zmysłowe są odbiciem.'],
+        ['dualizm','Podział rzeczywistości na dwie sfery: idei i zjawisk, duszy i ciała.'],
+        ['cnota','U Sokratesa tożsama z wiedzą; u Arystotelesa — sprawność wypracowana ćwiczeniem.'],
+        ['stoicyzm','Życie zgodne z rozumem i naturą; rozróżnianie tego, co zależne i niezależne od nas.'],
+        ['epikureizm','Szczęście jako brak cierpienia i lęku, osiągany przez umiar, nie przez rozpustę.'],
+        ['cynizm','Odrzucenie konwencji i dóbr zewnętrznych na rzecz życia wedle natury.'],
+        ['sceptycyzm','Powstrzymanie się od sądu tam, gdzie nie ma rozstrzygających racji.'],
+        ['ataraksja','Niezmącony spokój ducha — cel epikurejczyka.'],
+        ['apatheia','Wolność od namiętności zakłócających sąd — cel stoika.'],
+        ['majeutyka','Sokratejska „sztuka położnicza": wydobywanie wiedzy z rozmówcy przez pytania.']],
+ ex:{type:'sort', q:'Każde zdanie jest odpowiedzią jakiejś szkoły na pytanie „jak żyć". Przypisz je właściwej. Podpowiedź: patrz nie na treść rady, lecz na to, co dana szkoła uznaje za źródło niepokoju.',
+     bins:[['sto','Stoicyzm'],['epi','Epikureizm'],['cyn','Cynizm'],['pla','Platonizm']],
+     items:[['Rozróżniaj to, co od ciebie zależy, od tego, co nie zależy — i trap się tylko pierwszym','sto'],
+            ['Nie bój się śmierci: póki jesteś ty, nie ma jej, a gdy ona jest, nie ma już ciebie','epi'],
+            ['Cierpienie jest nieuchronne, ale sąd o cierpieniu należy do ciebie','sto'],
+            ['Ogranicz pragnienia do naturalnych i koniecznych, a wystarczy ci chleb i przyjaciel','epi'],
+            ['Odsuń się, zasłaniasz mi słońce','cyn'],
+            ['Konwencje społeczne są umową, nie prawem natury — można je odrzucić','cyn'],
+            ['To, co widzisz, jest cieniem; prawdziwe jest to, co poznaje sam rozum','pla'],
+            ['Zadaniem filozofa jest wyjść z jaskini i wrócić, by opowiedzieć','pla']],
+     fb:{sto:'Źródłem niepokoju jest fałszywy sąd o rzeczach. Lekarstwem — rozum i rozróżnienie tego, co w naszej mocy.',
+         epi:'Źródłem niepokoju jest lęk (przed bogami, śmiercią, bólem) i pragnienie ponad miarę. Lekarstwem — ograniczenie i przyjaźń. Wbrew potocznemu sensowi słowa „epikurejczyk" to program ascetyczny.',
+         cyn:'Źródłem niepokoju jest konwencja. Lekarstwem — jawne jej lekceważenie, aż do prowokacji.',
+         pla:'Źródłem błędu jest poleganie na zmysłach. Lekarstwem — poznanie idei, dostępne tylko rozumowi.'}},
+ quiz:[{q:'Mit jaskini pochodzi z:',
+        o:['Etyki nikomachejskiej','Państwa Platona','Rozmyślań Marka Aureliusza','Obrony Sokratesa'],c:1,
+        e:'Księga VII Państwa. Więźniowie widzą cienie na ścianie i biorą je za rzeczywistość — obraz stosunku świata zmysłowego do świata idei.'},
+       {q:'Potoczne rozumienie słowa „epikurejczyk" jako miłośnika uciech jest:',
+        o:['zgodne z nauką Epikura','odwróceniem jej sensu — Epikur zalecał ograniczenie pragnień','zgodne, ale tylko wobec późnych epikurejczyków','nieistotne dla filozofii'],c:1,
+        e:'Epikur uczył, że przyjemnością jest brak cierpienia i lęku, a osiąga się ją przez skromność. Karykatura powstała w polemice przeciwników.'},
+       {q:'Sokratejska majeutyka polega na:',
+        o:['wykładaniu gotowej wiedzy','zadawaniu pytań, aż rozmówca sam dojdzie do wniosku','zapisywaniu dialogów','nauczaniu skutecznej retoryki'],c:1,
+        e:'„Sztuka położnicza": filozof nie rodzi wiedzy, tylko pomaga ją urodzić. Sokrates niczego nie zapisał — znamy go z tekstów Platona i Ksenofonta.'},
+       {q:'Arystotelesowska cnota to:',
+        o:['wiedza, jak u Sokratesa','środek między dwiema skrajnościami, wypracowany ćwiczeniem','dar bogów','wrodzona skłonność'],c:1,
+        e:'Odwaga leży między tchórzostwem a brawurą. Kluczowe jest to, że cnoty się nabywa przez powtarzanie — to sprawność, nie wiedza teoretyczna.'}],
+ prompt:'Weź realny problem, który Cię teraz zajmuje, i rozpisz dwie odpowiedzi: stoicką i epikurejską. Która brzmi uczciwiej?'
+},
+{
+ id:'m09', n:'IX', k:'h', t:'Historia Grecji', when:'2000 – 30 p.n.e.', mins:20,
+ zone:[-800,-300,'grec'],
+ axis:'Pasmo Grecji w całości. Wyprawa Aleksandra ma w tym kursie własną mapę — przycisk poniżej przełącza na atlas.',
+ lead:`<p>Grecja nigdy nie była państwem. Była kilkuset <em>polis</em> — miastami-państwami,
+ oddzielonymi górami i morzem, mówiącymi tym samym językiem i skłóconymi ze sobą przez większość
+ swojej historii. Wspólnotę dawały im igrzyska, wyrocznia w Delfach i poczucie odrębności od
+ barbarzyńców.</p>
+ <p>Ateny i Sparta wypracowały dwa przeciwstawne modele. Ateny: demokracja bezpośrednia,
+ zgromadzenie ludowe, losowanie urzędów, ostracyzm jako zawór bezpieczeństwa, flota i handel.
+ Sparta: dwóch królów, rada starszych, eforowie, ziemia uprawiana przez helotów, wychowanie
+ wojskowe od siódmego roku życia. Obie były do siebie potrzebne — najpierw żeby wspólnie odeprzeć
+ Persów, potem żeby się nawzajem wyniszczyć w wojnie peloponeskiej.</p>
+ <p>Przy okazji wojen perskich narodziła się historiografia. Herodot pyta, dlaczego Grecy i Persowie
+ poszli na siebie, i zbiera po drodze wszystko, co ciekawe — także plotki. Tukidydes idzie dalej:
+ odrzuca boską przyczynowość, szuka interesów i strachu, przyznaje się do rekonstruowania mów.
+ To on jest właściwym początkiem historii jako dyscypliny. Wszystko kończy Macedonia: Filip
+ podporządkowuje polis, Aleksander w trzynaście lat rozbija Persję, a kultura grecka staje się
+ językiem całego Wschodu.</p>`,
+ works:[['Herodot','<i>Dzieje</i> — „ojciec historii", ale i ojciec dygresji'],
+        ['Tukidydes','<i>Wojna peloponeska</i> — analiza przyczyn bez udziału bogów'],
+        ['Ksenofont','<i>Anabaza</i> — marsz dziesięciu tysięcy'],
+        ['Plutarch','<i>Żywoty równoległe</i> — biografie zestawiane parami, Grek i Rzymianin']],
+ terms:[['polis','Miasto-państwo: wspólnota obywateli z własnym prawem, kultem i wojskiem.'],
+        ['demokracja bezpośrednia','Obywatele decydują osobiście na zgromadzeniu, bez przedstawicieli.'],
+        ['ostracyzm','Głosowanie skorupkami o wygnaniu na dziesięć lat kogoś zbyt wpływowego. Nie kara — środek zapobiegawczy.'],
+        ['hoplita','Ciężkozbrojny piechur walczący w zwartym szyku; obywatel kupujący uzbrojenie samodzielnie.'],
+        ['falanga','Szyk zwartych szeregów hoplitów; siła w spójności, nie w indywidualnym męstwie.'],
+        ['agora','Plac miejski: rynek, miejsce zgromadzeń i rozmów.'],
+        ['akropol','Wzgórze warowne z głównymi świątyniami miasta.'],
+        ['hellenizm','Epoka po Aleksandrze: kultura grecka jako wspólny język Wschodu.'],
+        ['heloci','Zależna ludność Lakonii i Mesenii, uprawiająca ziemię Spartiatów.']],
+ ex:{type:'cmp', q:'Dwa modele wspólnoty. Przeczytaj zestawienie, a potem otwórz atlas i przejdź trasę Aleksandra — to ten sam moduł, tylko oglądany z mapy.',
+     a:{h:'Ateny',li:['Demokracja bezpośrednia; zgromadzenie ludowe decyduje osobiście',
+                      'Większość urzędów obsadzana losowaniem, nie wyborem',
+                      'Ostracyzm jako hamulec wobec zbyt wpływowych',
+                      'Potęga morska i handlowa; flota trierą',
+                      'Wychowanie: paideia — retoryka, muzyka, gimnastyka',
+                      'Otwartość na obcych i na nowe idee — i proces Sokratesa jako jej granica']},
+     b:{h:'Sparta',li:['Ustrój mieszany: dwóch królów, geruzja, pięciu eforów',
+                       'Obywatel to przede wszystkim żołnierz; ziemia w rękach wspólnoty',
+                       'Heloci uprawiają ziemię, Spartiaci ćwiczą',
+                       'Potęga lądowa; falanga bez sobie równych',
+                       'Wychowanie: agoge — koszary od siódmego roku życia',
+                       'Nieufność wobec obcych, zakaz podróży, brak murów miejskich']},
+     k:'Ateny przegrały wojnę peloponeską, ale wygrały pamięć: to ich instytucje, teatr i filozofia stały się punktem odniesienia Zachodu. Ze Sparty został wzorzec dyscypliny — i ani jedno dzieło literackie.',
+     atlas:true},
+ quiz:[{q:'Ostracyzm był:',
+        o:['karą śmierci przez ukamienowanie','wygnaniem na dziesięć lat, orzekanym bez zarzutu przestępstwa','wykluczeniem z życia religijnego','podatkiem od majątku'],c:1,
+        e:'Głosowano skorupkami (ostrakon). Nie wymagał postawienia zarzutu — służył usunięciu kogoś, kto stał się zbyt potężny dla równowagi ustroju.'},
+       {q:'Tukidydes różni się od Herodota przede wszystkim tym, że:',
+        o:['pisał wierszem','odrzuca wyjaśnienia religijne i szuka przyczyn politycznych','opisywał wojny perskie','był Spartaninem'],c:1,
+        e:'Herodot chętnie przywołuje wyrocznie i zrządzenia bóstw. Tukidydes tłumaczy wojnę wzrostem potęgi Aten i strachem Sparty — to analiza, nie opowieść.'},
+       {q:'Podstawą siły militarnej greckiego polis był:',
+        o:['najemnik','hoplita — obywatel kupujący uzbrojenie na własny koszt','jeździec z arystokracji','łucznik'],c:1,
+        e:'Kto mógł kupić hoplon i pancerz, ten walczył — i dlatego miał prawa polityczne. Ustrój i sposób walki są tu ze sobą sprzężone.'},
+       {q:'Hellenizm to epoka:',
+        o:['przed wojnami perskimi','między reformami Solona a Klejstenesa','po Aleksandrze, gdy greka staje się językiem całego Wschodu','panowania rzymskiego nad Grecją'],c:2,
+        e:'Umownie 323–30 p.n.e., od śmierci Aleksandra do śmierci Kleopatry. Aleksandria z Biblioteką i Muzejonem jest jej stolicą intelektualną.'}],
+ prompt:'Który model — ateński czy spartański — okazał się trwalszy i w jakim sensie? Uzasadnij, rozróżniając trwałość instytucji i trwałość wpływu.'
+},
+{
+ id:'m10', n:'X', k:'h', t:'Rzym — od królestwa do republiki', when:'753 – 27 p.n.e.', mins:20,
+ zone:[-753,-27,'roma'],
+ axis:'Pasmo Rzymu: od legendarnego założenia po Augusta. Zwróć uwagę, jak długi jest odcinek republiki — blisko pięć wieków.',
+ lead:`<p>Rzym zaczyna się od mitu o braterstwie zakończonym bratobójstwem i od gwałtu na
+ Sabinkach. To znamienne: Rzymianie nie upiększali swojej genezy, bo interesowała ich nie
+ niewinność, lecz <em>trwałość</em>. Ich pytaniem nie było „czy jesteśmy dobrzy", tylko
+ „dlaczego jesteśmy silni".</p>
+ <p>Odpowiedź brzmiała: ustrój. Po wygnaniu królów w 509 r. Rzym buduje konstrukcję, której
+ celem jest, żeby nikt nie mógł zdobyć władzy sam. Dwóch konsulów na rok, żeby jeden hamował
+ drugiego. Kolejność urzędów — <i>cursus honorum</i>. Senat, formalnie doradczy, faktycznie
+ rządzący. Trybun ludowy z prawem weta wobec każdej decyzji. Dyktator — ale tylko na sześć
+ miesięcy i tylko w potrzebie. Ta machina wytrzymała Hannibala.</p>
+ <p>Nie wytrzymała własnego sukcesu. Podbój Śródziemnomorza zalał Italię niewolnikami
+ i zrujnował drobnych rolników, z których rekrutowano legiony. Gdy Grakchowie spróbowali
+ reformy rolnej, zginęli. Sulla wprowadził proskrypcje — listy obywateli, których wolno
+ zabić bezkarnie. Wojsko stało się wierne wodzowi, nie republice. Cezar przekroczył Rubikon,
+ a po jego śmierci nastąpiło kolejne piętnaście lat wojen domowych. Republika nie została
+ obalona jednym zamachem — <b>zużyła się</b>.</p>`,
+ works:[['Cyceron','mowy przeciw Katylinie, <i>O powinnościach</i> — wzorzec prozy łacińskiej'],
+        ['Cezar','<i>O wojnie galijskiej</i> — sprawozdanie pisane o sobie w trzeciej osobie'],
+        ['Liwiusz','<i>Dzieje Rzymu od założenia miasta</i>'],
+        ['Salustiusz','<i>Sprzysiężenie Katyliny</i> — historia jako diagnoza upadku obyczajów']],
+ terms:[['res publica','„Rzecz wspólna" — państwo pojmowane jako sprawa wszystkich obywateli.'],
+        ['senat','Zgromadzenie byłych urzędników; formalnie doradcze, faktycznie kierujące polityką.'],
+        ['konsul','Dwóch najwyższych urzędników wybieranych na rok; wzajemnie się blokują.'],
+        ['trybun ludowy','Obrońca plebejuszy, nietykalny, z prawem weta wobec decyzji urzędników i senatu.'],
+        ['dyktator','Urzędnik nadzwyczajny powoływany na sześć miesięcy w sytuacji zagrożenia.'],
+        ['cursus honorum','Ustalona kolejność urzędów: kwestor → edyl → pretor → konsul.'],
+        ['triumwirat','Nieformalne porozumienie trzech polityków o podziale wpływów.'],
+        ['homo novus','Człowiek nowy — pierwszy w rodzinie, który dochodzi do konsulatu; tak o sobie mówił Cyceron.'],
+        ['proskrypcje','Listy osób wyjętych spod prawa, których majątek przechodził na donosiciela.'],
+        ['retoryka','Sztuka przekonywania; w Rzymie droga do kariery politycznej i przedmiot szkolny numer jeden.']],
+ ex:{type:'republic', q:'Klikaj elementy ustroju republiki i sprawdź, kto kogo powołuje, kto kogo hamuje i gdzie ta konstrukcja pękła.',
+     nodes:[['pop','Zgromadzenia ludowe','Komicja wybierają urzędników i uchwalają ustawy. Głosowanie odbywa się grupami, nie głowami — bogatsze centurie głosują pierwsze i często rozstrzygają, zanim dojdzie do biedniejszych.'],
+            ['mag','Urzędnicy — cursus honorum','Kwestor, edyl, pretor, konsul; obok nich cenzor. Wszystkie urzędy są kolegialne i roczne. Kolegialność oznacza, że kolega z urzędu może cię zablokować.'],
+            ['sen','Senat','Byli urzędnicy, dożywotnio. Formalnie tylko doradza, ale kontroluje finanse, politykę zagraniczną i przydział prowincji. Realne centrum władzy.'],
+            ['tri','Trybun ludowy','Nietykalny obrońca plebejuszy. Jedno słowo — <i>veto</i> — zatrzymuje uchwałę, wybory, nawet pobór. Największy hamulec w całym systemie.'],
+            ['dic','Dyktator','Powoływany na sześć miesięcy, gdy zawodzą zwykłe środki. Ma pełnię władzy i nie odpowiada za swoje decyzje. Bezpiecznik — dopóki nikt go nie przetrzyma.']],
+     k:'Cała konstrukcja jest zaporą przeciw jedynowładztwu: roczność, kolegialność, weto, kadencja dyktatora. Pękła nie dlatego, że ktoś złamał jedną regułę, lecz dlatego, że armia zaczęła być wierna wodzowi, który płacił i dawał ziemię, a nie urzędowi, który ją powoływał. Sulla zostaje dyktatorem bez terminu, Cezar dyktatorem dożywotnim — i formalnie nic się nie łamie.'},
+ quiz:[{q:'Prawo weta w republice rzymskiej przysługiwało:',
+        o:['senatowi','konsulowi wobec drugiego konsula i trybunowi ludowemu','wyłącznie dyktatorowi','zgromadzeniom ludowym'],c:1,
+        e:'Kolegialność urzędów oznaczała wzajemną blokadę, a trybun mógł zatrzymać niemal każdą decyzję. To najsilniejszy hamulec systemu — i narzędzie jego paraliżu w I w. p.n.e.'},
+       {q:'„Homo novus" to:',
+        o:['wyzwoleniec','pierwszy w rodzie, który doszedł do konsulatu','nowy obywatel z prowincji','młody senator'],c:1,
+        e:'Tak określał się Cyceron. W społeczeństwie rządzonym przez kilkadziesiąt rodów było to wyróżnienie i obciążenie jednocześnie.'},
+       {q:'Bezpośrednią przyczyną kryzysu republiki było:',
+        o:['najazd Hannibala','uzależnienie legionów od wodza, nie od państwa','zniesienie trybunatu','klęska pod Kannami'],c:1,
+        e:'Reformy Mariusza otworzyły służbę dla bezrolnych, których po wojnie musiał zaopatrzyć wódz. Lojalność przesunęła się z urzędu na osobę — i tym samym republika straciła monopol na przemoc.'},
+       {q:'Dyktator w republice rzymskiej był:',
+        o:['tyranem uzurpującym władzę','urzędnikiem nadzwyczajnym powoływanym na sześć miesięcy','dowódcą floty','doradcą konsulów'],c:1,
+        e:'To urząd przewidziany przez ustrój, z ostrym ograniczeniem czasowym. Dopiero Sulla i Cezar to ograniczenie usuwają — nie łamiąc formy, tylko ją wydrążając.'}],
+ prompt:'Republika miała komplet zabezpieczeń i mimo to upadła. Wskaż jedno takie zabezpieczenie i wyjaśnij, dlaczego okazało się niewystarczające.'
+},
+{
+ id:'m11', n:'XI', k:'l', t:'Złoty wiek — literatura augustowska', when:'42 p.n.e. – 17 n.e.', mins:22,
+ zone:[-70,20,'work'],
+ axis:'Belki życiorysów Wergiliusza, Horacego i Owidiusza plus pasmo dzieł. Włącz nakładkę „paradoks" w warstwach — teraz nabierze sensu.',
+ lead:`<p>Po Akcjum Rzym jest wyczerpany. Sto lat wojen domowych, proskrypcje, konfiskaty ziemi.
+ Oktawian wygrywa i staje przed zadaniem trudniejszym niż wojna: musi przekonać Rzymian, że nowy
+ porządek nie jest uzurpacją. Narzędziem jest <em>mecenat</em> — Mecenas, jego przyjaciel,
+ skupia wokół siebie najlepszych poetów epoki.</p>
+ <p><b>Eneida</b> jest odpowiedzią na to zadanie i jednocześnie arcydziełem, które je przerasta.
+ Dwanaście ksiąg: sześć pierwszych to tułaczka na wzór <i>Odysei</i>, sześć następnych — wojna na wzór
+ <i>Iliady</i>. Bohaterem jest Eneasz, którego stałym epitetem jest <i>pius</i> — pobożny,
+ obowiązkowy, powolny wobec przeznaczenia. To zupełnie nowy typ bohatera: nie Achilles idący za
+ gniewem, lecz człowiek, który porzuca ukochaną Dydonę, bo tak trzeba.</p>
+ <p>Tu tkwi klucz do całego kursu. <b>Eneida nie jest opowieścią o czasach Wergiliusza.</b>
+ Akcja dzieje się około 1184 r. p.n.e., czyli jakieś 1155 lat przed piórem autora. Kiedy poeta
+ siada do pracy w 29 r. p.n.e., Rzym istnieje od 724 lat, republika — od 480, Kartagina leży
+ w gruzach od 117 lat. A jednak coś rzeczywiście dopiero powstaje: pryncypat. Od Akcjum minęły
+ dwa lata, tytuł Augusta padnie dopiero za dwa następne. Wergiliusz pisze więc dokładnie wtedy,
+ gdy ustrój zmienia się na oczach pokolenia — i jego zadaniem jest pokazać, że to nie zamach,
+ tylko spełnienie przeznaczenia zapowiedzianego u zarania. Dlatego Wenus mówi o Rzymianach,
+ których jeszcze nie ma, a Jowisz odpowiada przepowiednią sięgającą aż po Augusta.</p>
+ <p>To nie jest opowieść o tym, jak było. To opowieść o tym, <em>po co jest Rzym</em> — napisana
+ wtedy, gdy Rzym musiał sobie na nowo odpowiedzieć na to pytanie.</p>`,
+ works:[['Wergiliusz','<i>Bukoliki</i>, <i>Georgiki</i>, <i>Eneida</i>'],
+        ['Horacy','<i>Pieśni</i>, <i>Sztuka poetycka</i>'],
+        ['Owidiusz','<i>Metamorfozy</i>, <i>Sztuka kochania</i>, <i>Tristia</i>'],
+        ['Liwiusz','<i>Dzieje Rzymu</i> — historia jako galeria wzorów obywatelskich'],
+        ['Tibullus, Propercjusz','elegia miłosna']],
+ terms:[['mecenat','Opieka możnego nad twórcami; od imienia Mecenasa, doradcy Augusta.'],
+        ['epos narodowy','Epopeja opowiadająca o początkach wspólnoty i uzasadniająca jej istnienie.'],
+        ['pietas','Rzymska cnota: obowiązek wobec bogów, ojczyzny i rodziny, ważniejszy od uczuć.'],
+        ['fatum','Przeznaczenie; w Eneidzie nie ślepy los, lecz plan, który historia ma wypełnić.'],
+        ['prolepsis','Zapowiedź przyszłości wewnątrz opowieści — proroctwo o wydarzeniach późniejszych niż akcja.'],
+        ['mit założycielski','Opowieść o początkach uzasadniająca obecny porządek.'],
+        ['aitiologia','Wyjaśnianie pochodzenia obyczaju, nazwy lub instytucji przez opowieść o jej początku.'],
+        ['poezja polityczna','Utwór wpisujący się w program ideowy władzy — co nie przesądza o jego wartości artystycznej.']],
+ ex:{type:'annot', q:'Proroctwo Jowisza z pierwszej księgi Eneidy. Klikaj podkreślone miejsca — każde z nich jest przykładem innego chwytu.',
+     src:'Tekst łaciński: Wergiliusz, <i>Aeneis</i> I — domena publiczna. Przekład roboczy sporządzony na potrzeby tego kursu (nie jest to żaden z przekładów publikowanych).',
+     lines:[
+      {la:'Parce metu, Cytherea: manent immota tuorum fata tibi.',
+       pl:'Porzuć lęk, Cyterejko: los twoich potomków trwa niewzruszony.',
+       an:[['fatum','Fatum jako plan, nie ślepy przypadek','Jowisz nie przewiduje przyszłości — on ją ogłasza jako już ustaloną. W eposie narodowym przeznaczenie musi być pewne, inaczej nie uzasadniałoby niczego.']]},
+      {la:'Bellum ingens geret Italia populosque feroces contundet moresque viris et moenia ponet.',
+       pl:'Wielką wojnę stoczy w Italii, zetrze dzikie ludy, a mężom nada obyczaj i mury.',
+       an:[['pietas','Obyczaj i mury zamiast łupu','Grecki bohater zdobywa sławę. Rzymski nadaje prawo i buduje. Cała różnica programów zmieściła się w jednym wersie.']]},
+      {la:'His ego nec metas rerum nec tempora pono: imperium sine fine dedi.',
+       pl:'Tym nie zakreślam ani granic, ani kresu czasu: dałem im władzę bez końca.',
+       an:[['prolepsis','„Dałem" — czas przeszły o przyszłości','Z punktu widzenia akcji rzecz dopiero nastąpi, ale Jowisz mówi o niej jako o dokonanej. To najsilniejszy chwyt legitymizacyjny w całym eposie.'],
+           ['sine','imperium sine fine','Zdanie, które przez wieki cytowano jako formułę wieczności Rzymu — i którym Rzym uzasadniał każdy kolejny podbój.']]},
+      {la:'Romanos rerum dominos gentemque togatam.',
+       pl:'Rzymian, panów świata, naród noszący togę.',
+       an:[['toga','Naród w todze, nie w zbroi','Toga to strój cywilny. Rzym przedstawia się jako władca, który rządzi prawem — mimo że właśnie wyszedł ze stu lat wojen domowych.']]},
+      {la:'Nascetur pulchra Troianus origine Caesar, imperium Oceano, famam qui terminet astris.',
+       pl:'Narodzi się Trojańczyk z pięknego rodu — Cezar, który władzę zamknie Oceanem, a sławę gwiazdami.',
+       an:[['aitio','Zamknięcie klamry','Proroctwo wypowiedziane w XII wieku p.n.e. trafia dokładnie w rodzinę panującą w chwili pisania. Odbiorca Wergiliusza siedzi w punkcie, do którego zmierza cała opowieść.']]}],
+     k:'Zbierz to razem: akcja w epoce mitycznej, proroctwo o czasach współczesnych autorowi, bohater o cnocie zdefiniowanej jako posłuszeństwo obowiązkowi. Eneida legitymizuje nowy ustrój, podpinając go pod najstarszy możliwy korzeń. I jest przy tym wielką poezją — te dwie rzeczy nie wykluczają się nawzajem.'},
+ quiz:[{q:'Akcja Eneidy rozgrywa się:',
+        o:['w czasach Augusta','ok. 1184 r. p.n.e., czyli ok. 1155 lat przed napisaniem utworu','w okresie wojen punickich','w czasach założenia republiki'],c:1,
+        e:'To sedno całego nieporozumienia wokół tego utworu. Eneida jest mitem założycielskim, nie relacją z epoki autora.'},
+       {q:'Stałym epitetem Eneasza jest:',
+        o:['fortis — mężny','pius — pobożny, wierny obowiązkowi','callidus — przebiegły','felix — szczęśliwy'],c:1,
+        e:'Pietas to podporządkowanie obowiązkowi wobec bogów, ojczyzny i rodziny. Dlatego Eneasz opuszcza Dydonę — i dlatego nie jest bohaterem homeryckim.'},
+       {q:'Gdy Wergiliusz zaczyna pisać Eneidę w 29 r. p.n.e.:',
+        o:['Oktawian nosi już tytuł Augusta','od bitwy pod Akcjum minęły dwa lata, tytuł Augusta padnie za dwa','trwają jeszcze wojny domowe','republika istnieje formalnie od stu lat'],c:1,
+        e:'Akcjum to 31 r., tytuł Augusta — 27 r., domknięcie ustroju — 23 r. Odpowiedź na pytanie „kiedy zaczyna się cesarstwo" zależy od tego, co uznamy za jego istotę.'},
+       {q:'Prolepsis w Eneidzie polega na:',
+        o:['cofnięciu się do wydarzeń wcześniejszych','zapowiedzi wydarzeń późniejszych niż akcja utworu','powtórzeniu motywu','porównaniu rozbudowanym'],c:1,
+        e:'Jowisz i przegląd dusz w księdze VI zapowiadają dzieje Rzymu aż po Augusta — z perspektywy bohaterów to przyszłość odległa o tysiąc lat, z perspektywy czytelnika to teraźniejszość.'},
+       {q:'Mecenat oznaczał:',
+        o:['podatek na kulturę','opiekę możnego nad twórcami','cenzurę utworów politycznych','stypendium państwowe dla poetów'],c:1,
+        e:'Od imienia Mecenasa, przyjaciela Augusta. Opieka dawała poetom byt, ale też wpisywała ich w program ideowy władzy — Owidiusz przekonał się, co się dzieje, gdy z niego wypadnie.'}],
+ prompt:'Wskaż współczesną opowieść — film, serial, przemówienie — która działa jak mit założycielski: tłumaczy teraźniejszość przez opowieść o początkach.'
+},
+{
+ id:'m12', n:'XII', k:'h', t:'Cesarstwo i narodziny chrześcijaństwa', when:'27 p.n.e. – 476 n.e.', mins:20,
+ zone:[-27,476,'roma'],
+ axis:'Pasma Rzymu i chrześcijaństwa równolegle. Odczytaj odstęp między ukrzyżowaniem a edyktem tesalońskim — to 350 lat.',
+ lead:`<p>Pryncypat był jedynowładztwem, które udawało republikę. August tytułował się
+ <i>princeps</i> — pierwszy obywatel; senat obradował, urzędy istniały, formy zostały zachowane.
+ Wystarczyło jedno: kiedy August umarł, władzę odziedziczył Tyberiusz. Skoro władza przechodzi
+ na następcę, wszyscy wiedzą, czym jest naprawdę. Trzy wieki później Dioklecjan przestaje udawać
+ i wprowadza dominat — cesarz jako <i>dominus et deus</i>, pan i bóg.</p>
+ <p>Chrześcijaństwo rośnie w tym państwie przez trzysta lat, przez większość czasu jako religia
+ nielegalna. Warto trzymać chronologię w ryzach, bo tu najczęściej się ją myli. Ukrzyżowanie
+ około 30 r. to wyrok lokalnego prefekta, nie prześladowanie chrześcijan — chrześcijan jako
+ grupy jeszcze nie ma. Pierwsze prawdziwe prześladowanie to Neron w 64 r., po pożarze Rzymu.
+ Potem fale kolejne, aż do Dioklecjana. Przełom przychodzi w 313 r. z edyktem mediolańskim,
+ a w 380 r. Teodozjusz czyni chrześcijaństwo religią państwową. <b>W ciągu 67 lat prześladowani
+ stają się jedynym legalnym kultem.</b></p>
+ <p>Równolegle trwa wielka literatura: Seneka pisze listy o tym, jak żyć, Tacyt — najostrzejszą
+ prozę historyczną antyku, Petroniusz — powieść obyczajową z ucztą Trymalchiona, dorobkiewicza,
+ którego rozpoznalibyśmy dzisiaj bez trudu. Na koniec Augustyn wynajduje w <i>Wyznaniach</i>
+ wnętrze jako temat literatury, a Hieronim daje Zachodowi Wulgatę.</p>`,
+ works:[['Seneka','<i>Listy moralne do Lucyliusza</i>, tragedie'],
+        ['Tacyt','<i>Roczniki</i>, <i>Dzieje</i>, <i>Germania</i>'],
+        ['Swetoniusz','<i>Żywoty cezarów</i> — biografia z anegdotą i plotką'],
+        ['Petroniusz','<i>Satyricon</i> — <i>Uczta Trymalchiona</i>'],
+        ['Marek Aureliusz','<i>Rozmyślania</i>'],
+        ['św. Augustyn','<i>Wyznania</i>, <i>Państwo Boże</i>'],
+        ['św. Hieronim','<i>Wulgata</i> — łaciński przekład Biblii']],
+ terms:[['pryncypat','Ustrój Augusta: jedynowładztwo zachowujące formy republikańskie.'],
+        ['dominat','Ustrój od Dioklecjana: cesarz jako pan i bóg, jawna monarchia absolutna.'],
+        ['kult cesarza','Oddawanie czci boskiej władcy; dla chrześcijan nie do przyjęcia i stąd konflikt.'],
+        ['katakumby','Podziemne cmentarze pod Rzymem; miejsce pochówku, nie stałego ukrywania się.'],
+        ['apologetyka','Piśmiennictwo broniące chrześcijaństwa przed zarzutami pogan.'],
+        ['patrystyka','Nauka o pismach Ojców Kościoła.'],
+        ['ojcowie Kościoła','Pisarze pierwszych wieków, których nauka ukształtowała doktrynę — Augustyn, Hieronim, Ambroży.'],
+        ['edykt mediolański','313 r.: Konstantyn i Licyniusz gwarantują wolność wyznania.'],
+        ['edykt tesaloński','380 r.: Teodozjusz czyni chrześcijaństwo religią państwową.']],
+ ex:{type:'seq', q:'Ułóż w kolejności chronologicznej. To ćwiczenie rozbraja najczęstszy błąd w rozumieniu tej epoki: sklejanie ukrzyżowania, prześladowań i triumfu chrześcijaństwa w jeden moment.',
+     items:[['Ukrzyżowanie za prefekta Poncjusza Piłata',30],
+            ['Pożar Rzymu i pierwsze prześladowania za Nerona',64],
+            ['Zburzenie Świątyni Jerozolimskiej przez Tytusa',70],
+            ['Powstanie Ewangelii i Listów św. Pawła',75],
+            ['Dominat Dioklecjana',284],
+            ['Edykt mediolański',313],
+            ['Edykt tesaloński — chrześcijaństwo religią państwową',380],
+            ['Podział cesarstwa po śmierci Teodozjusza',395],
+            ['Upadek cesarstwa zachodniorzymskiego',476]],
+     k:'Od ukrzyżowania do religii państwowej mija 350 lat — tyle, ile od potopu szwedzkiego do dziś. Prześladowania nie były jednym ciągiem, lecz falami, między którymi bywały dziesięciolecia spokoju.'},
+ quiz:[{q:'Ukrzyżowanie Jezusa było:',
+        o:['pierwszym prześladowaniem chrześcijan','wyrokiem lokalnego prefekta Judei','decyzją cesarza Nerona','skutkiem edyktu przeciw nowym kultom'],c:1,
+        e:'Wyrok wydał Poncjusz Piłat około 30 r. Chrześcijan jako odrębnej grupy jeszcze nie było — pierwsze prześladowanie to Neron, 34 lata później.'},
+       {q:'Różnica między pryncypatem a dominatem polega na tym, że:',
+        o:['pryncypat był republiką, dominat monarchią','pryncypat zachowywał formy republikańskie, dominat już nie','dominat był wcześniejszy','pryncypat obejmował tylko Zachód'],c:1,
+        e:'August rządził jako „pierwszy obywatel" przy zachowanych instytucjach. Dioklecjan porzucił tę fikcję i przyjął tytulaturę monarchy absolutnego.'},
+       {q:'Ile lat dzieli edykt mediolański od edyktu tesalońskiego?',
+        o:['17','67','107','350'],c:1,
+        e:'313 → 380. W ciągu dwóch pokoleń religia dopiero co tolerowana staje się jedyną legalną.'},
+       {q:'„Uczta Trymalchiona" to fragment:',
+        o:['Roczników Tacyta','Satyriconu Petroniusza','Żywotów cezarów Swetoniusza','Listów Seneki'],c:1,
+        e:'Satyricon to najbliższa powieści forma, jaką zna literatura rzymska. Trymalchion — wyzwoleniec obnoszący się z majątkiem — jest jedną z najlepszych postaci satyrycznych antyku.'}],
+ prompt:'Chrześcijaństwo przeszło od prześladowania do statusu religii państwowej w 67 lat. Co Twoim zdaniem zmienia się w ruchu, który przestaje być prześladowany?'
+},
+{
+ id:'m13', n:'XIII', k:'y', t:'Dziedzictwo antyku', when:'od renesansu po dziś', mins:20,
+ zone:[-800,476,null],
+ axis:'Cała oś. Od tego momentu patrz na nią jak na magazyn, z którego czerpią wszystkie późniejsze epoki.',
+ lead:`<p>Antyk nie skończył się w 476 roku — zaczął być cytowany. Renesans nazwał się odrodzeniem
+ właśnie dlatego, że wracał do wzorów starożytnych. Klasycyzm uczynił z nich normę. Romantyzm
+ zbuntował się przeciw niej, ale spierał się z antykiem, a nie ignorował go: Mickiewicz zna
+ Horacego na pamięć.</p>
+ <p>W polszczyźnie kluczową postacią jest Kochanowski. Jego pieśni to horacjanizm przełożony na
+ język polski, <i>Odprawa posłów greckich</i> to pierwsza polska tragedia zbudowana na materiale
+ trojańskim, a <i>Treny</i> to moment, w którym antyczna pociecha filozoficzna zawodzi w zderzeniu
+ ze śmiercią dziecka — i to zawodzenie jest ich tematem.</p>
+ <p>Wiek XX czyta antyk najczęściej przewrotnie. Zbigniew Herbert pisze o Marsjaszu obdzieranym
+ ze skóry przez Apollina i staje po stronie krzyczącego, nie po stronie doskonałości. Wisława
+ Szymborska ogląda mity od strony postaci drugoplanowych. To nie jest odrzucenie tradycji, tylko
+ najbardziej wymagająca forma jej czytania: <b>spór z tekstem, który się zna dokładnie</b>.</p>`,
+ works:[['Jan Kochanowski','<i>Pieśni</i>, <i>Treny</i>, <i>Odprawa posłów greckich</i>'],
+        ['Adam Mickiewicz','klasyczne wykształcenie widoczne w formie i w polemice z nią'],
+        ['Zbigniew Herbert','<i>Apollo i Marsjasz</i>, <i>Powrót prokonsula</i>, <i>Tren Fortynbrasa</i>'],
+        ['Wisława Szymborska','mit oglądany z perspektywy postaci drugiego planu'],
+        ['Jan Parandowski','<i>Mitologia</i> — opracowanie, przez które większość Polaków poznaje mity']],
+ terms:[['topos','Utrwalony motyw powtarzany w literaturze różnych epok: wędrówka, arkadia, theatrum mundi.'],
+        ['motyw wędrowny','Wątek przechodzący między kulturami i epokami, za każdym razem przekształcany.'],
+        ['klasycyzm','Prąd uznający wzory antyczne za normę: ład, umiar, jasność, decorum.'],
+        ['mimesis','Naśladowanie rzeczywistości jako zadanie sztuki; pojęcie z Poetyki Arystotelesa.'],
+        ['kalokagatia','Ideał połączenia piękna i dobra — sprawności ciała z prawością charakteru.'],
+        ['ubi sunt','„Gdzie są ci, którzy byli przed nami" — topos przemijania.'],
+        ['memento mori','„Pamiętaj o śmierci" — wezwanie do świadomości własnej skończoności.'],
+        ['deus ex machina','Rozwiązanie akcji przez nagłą ingerencję z zewnątrz; pierwotnie bóg opuszczany na machinie.'],
+        ['pięta achillesowa','Jedyny słaby punkt kogoś skądinąd niezwyciężonego.'],
+        ['koń trojański','Podstęp ukryty w darze; dziś także termin informatyczny.'],
+        ['syzyfowa praca','Wysiłek bezskuteczny i powtarzany bez końca.'],
+        ['puszka Pandory','Źródło nieszczęść uwolnionych przez nieostrożną ciekawość.']],
+ ex:{type:'match', q:'Połącz motyw antyczny z późniejszym utworem, który go podejmuje. Zwróć uwagę: w trzech przypadkach późniejszy autor odwraca sens oryginału.',
+     left:'Motyw antyczny', right:'Późniejsze wcielenie',
+     pairs:[['Horacjańskie „non omnis moriar"','Kochanowski, <i>Pieśń XXIV</i> — „Niezwykłym i nie leda piórem opatrzony"'],
+            ['Wojna trojańska i poselstwo przed jej wybuchem','Kochanowski, <i>Odprawa posłów greckich</i>'],
+            ['Apollo obdziera Marsjasza ze skóry','Herbert, <i>Apollo i Marsjasz</i> — racja po stronie krzyku, nie doskonałości'],
+            ['Antyczna pociecha filozoficzna wobec śmierci','Kochanowski, <i>Treny</i> — pociecha zawodzi i to jest tematem'],
+            ['Powrót urzędnika do centrum władzy','Herbert, <i>Powrót prokonsula</i> — powrót jako kapitulacja']],
+     note:'Herbert i późny Kochanowski robią to samo: biorą gotowy wzorzec i sprawdzają go na własnym doświadczeniu. Wzorzec pęka — i dopiero to pęknięcie jest wierszem. Tak wygląda tradycja żywa, w odróżnieniu od cytowanej.'},
+ quiz:[{q:'Topos „ubi sunt" oznacza:',
+        o:['pochwałę umiaru','pytanie o tych, którzy odeszli, jako figurę przemijania','wezwanie do korzystania z chwili','naśladowanie rzeczywistości'],c:1,
+        e:'Dosłownie „gdzie są". Bliski memento mori, ale kładzie akcent na nieobecność, nie na groźbę śmierci.'},
+       {q:'„Deus ex machina" pierwotnie oznaczało:',
+        o:['błąd kompozycyjny','boga opuszczanego na machinie, by rozwiązał akcję','maszynę teatralną do zmiany dekoracji','chór wypowiadający morał'],c:1,
+        e:'Realne urządzenie sceniczne. Dopiero Arystoteles ocenił ten chwyt krytycznie i stąd dzisiejsze pejoratywne znaczenie.'},
+       {q:'W wierszu Herberta „Apollo i Marsjasz" racja jest po stronie:',
+        o:['Apollina jako uosobienia doskonałości','Marsjasza, którego krzyk okazuje się prawdziwszy od sztuki','obu w równym stopniu','sędziów konkursu'],c:1,
+        e:'Herbert odwraca sens mitu: wobec konkretnego cierpienia doskonałość boga okazuje się pusta. To wzorcowy przykład polemiki z tradycją prowadzonej od środka.'},
+       {q:'Kalokagatia to ideał:',
+        o:['złotego środka','połączenia piękna ciała z dobrocią charakteru','naśladowania natury','czystości języka'],c:1,
+        e:'Z greckiego kalos kai agathos — piękny i dobry. Sprawność fizyczna i prawość moralna jako jedna doskonałość, stąd ranga gimnazjonu w wychowaniu.'}],
+ prompt:'Wybierz jeden topos z listy pojęć i wskaż, gdzie spotkałeś go poza lekcją polskiego — w filmie, w reklamie, w rozmowie.'
+},
+{
+ id:'m14', n:'XIV', k:'y', t:'Oś czasu — mit i historia', when:'całość', mins:22,
+ zone:[-3200,476,null],
+ axis:'Włącz nakładkę „paradoks" w warstwach. Trzy strzałki to trzy pomiary, które rozbrajają najczęstsze pomyłki chronologiczne.',
+ lead:`<p>Czas mityczny i czas historyczny to dwa różne porządki. Pierwszy ma kolejność, ale nie ma
+ dat: Chaos, tytani, Prometeusz, potop, herosi, Troja, powroty, Eneasz — to następstwo opowieści,
+ nie kalendarz. Drugi ma daty i wymaga źródła. Starożytni sklejali oba bez zająknięcia: Eratostenes
+ wyliczył upadek Troi na 1184 r. p.n.e., a Rzymianie prowadzili genealogię od Eneasza do Romulusa
+ przez trzysta lat królów albańskich — dokładnie po to, by szew nie był widoczny.</p>
+ <p>Teraz rozplączmy trzy pomyłki, które splatają się najczęściej.</p>
+ <p><b>Pierwsza.</b> Wergiliusz zmarł w 19 r. p.n.e., Jezus urodził się około 4 r. p.n.e. Dzieli
+ ich piętnaście lat — poeta nie żył, gdy tamten się rodził. Owidiusz owszem, był współczesny,
+ ale w chwili ukrzyżowania nie żył już od kilkunastu lat, a wcześniej siedział na wygnaniu nad
+ Morzem Czarnym.</p>
+ <p><b>Druga.</b> „Rzymianie prześladujący chrześcijan" to jeszcze późniejsza epoka. Ukrzyżowanie
+ to wyrok lokalnego prefekta, a pierwsze prawdziwe prześladowanie to Neron w 64 r. — <b>82 lata</b>
+ po śmierci Wergiliusza. Nie 83: między rokiem 19 p.n.e. a 64 n.e. nie ma roku zerowego, więc
+ różnicę liczy się o jeden mniej, niż podpowiada odruch.</p>
+ <p><b>Trzecia i najważniejsza.</b> Wergiliusz nie pisał o swoich czasach. Akcja <i>Eneidy</i>
+ dzieje się około 1184 r. p.n.e., czyli jakieś 1155 lat wcześniej. To tak, jakby polski poeta
+ w 1918 roku pisał wielki epos o chrzcie Polski w 966. Państwo ma wtedy tysiąc lat — a poeta
+ opowiada o jego zaraniu właśnie dlatego, że powstaje coś nowego i trzeba to nowe podpiąć pod
+ starożytny korzeń.</p>`,
+ works:[],
+ terms:[['czas mityczny','Porządek następstwa opowieści bez datowania; nie podlega weryfikacji źródłowej.'],
+        ['czas historyczny','Następstwo zdarzeń datowanych i poświadczonych źródłami.'],
+        ['brak roku zerowego','Po 1 p.n.e. następuje bezpośrednio 1 n.e. Odstęp między datami po obu stronach ery liczy się o rok mniej.'],
+        ['datowanie umowne','Data przyjęta przez tradycję lub badaczy dla wygody, bez potwierdzenia źródłowego — jak 753 czy 1184 p.n.e.']],
+ ex:{type:'timeline'},
+ quiz:[{q:'Ile lat dzieli śmierć Wergiliusza (19 p.n.e.) od prześladowań Nerona (64 n.e.)?',
+        o:['83','82','84','45'],c:1,
+        e:'Nie ma roku zerowego: po 1 p.n.e. przychodzi od razu 1 n.e. Naiwne 19 + 64 = 83 daje wynik o rok za duży.'},
+       {q:'Akcja Eneidy dzieli od momentu jej pisania mniej więcej:',
+        o:['sto lat','trzysta lat','tysiąc sto pięćdziesiąt lat','dwa tysiące lat'],c:2,
+        e:'Ok. 1184 p.n.e. wobec 29 p.n.e. To dystans porównywalny z tym, który dzieli nas od czasów Mieszka I.'},
+       {q:'Data 753 p.n.e. dla założenia Rzymu jest:',
+        o:['poświadczona źródłem współczesnym wydarzeniu','wyliczeniem późniejszych autorów rzymskich','ustalona archeologicznie','przypadkowa'],c:1,
+        e:'Rzymianie wyliczyli ją wstecz z list urzędników i pokoleń. Archeologia potwierdza osadnictwo na Palatynie wcześniej, ale żadnego „założenia" w jednym roku.'},
+       {q:'Który z poniższych autorów rzeczywiście żył współcześnie z Jezusem?',
+        o:['Wergiliusz','Horacy','Owidiusz','Cyceron'],c:2,
+        e:'Owidiusz (43 p.n.e. – ok. 17 n.e.) jest jedynym z tej czwórki, którego życie zachodzi na życie Jezusa. Pozostali zmarli wcześniej: Cyceron w 43 p.n.e., Wergiliusz w 19 p.n.e., Horacy w 8 p.n.e.'}],
+ prompt:'Wróć do swoich odpowiedzi z modułu 0 — są odsłonięte poniżej. Zapisz, która z nich Cię zaskoczyła i dlaczego wydawała się oczywista.'
+},
+{
+ id:'m15', n:'XV', k:'t', t:'Metoda — jak to zapamiętać', when:'plan na sześć tygodni', mins:20,
+ zone:[-650,-400,'grec'],
+ axis:'Pasmo Grecji, okolice Symonidesa z Keos. Technika, której się teraz nauczysz, pochodzi z materiału tego kursu.',
+ lead:`<p>Podanie zapisane przez Cycerona: podczas uczty runął strop i zmiażdżył biesiadników nie
+ do rozpoznania. <b>Symonides z Keos</b>, który chwilę wcześniej wyszedł, wskazał ciała — bo pamiętał,
+ kto gdzie siedział. Stąd wniosek: pamięć trzyma się <em>miejsc</em>. Tak powstała sztuka pamięci,
+ której Rzymianie uczyli każdego mówcę.</p>
+ <p>Ta technika działa, ale sama nie wystarczy. Poniżej masz komplet — pięć zasad, z których każdą
+ potwierdzają badania nad uczeniem się, i wszystkie są w tym kursie wbudowane.</p>
+ <p><b>1. Najpierw test, potem nauka.</b> Zrobiłeś to w module 0. Próba odpowiedzi przed poznaniem
+ materiału trwale poprawia zapamiętywanie — nawet gdy odpowiedź była błędna. Zwłaszcza wtedy.</p>
+ <p><b>2. Przywoływanie zamiast czytania.</b> Ponowne przeczytanie notatki daje złudzenie
+ znajomości. Zamknij ją i opowiedz materiał z pamięci — dopiero to jest nauką. Quizy w każdym
+ module są po to, nie po to, żeby Cię ocenić.</p>
+ <p><b>3. Przeplatanie.</b> Nie ucz się trzynastu rozdziałów po kolei do skutku. Mieszaj:
+ Grecja, Rzym, Biblia, znowu Grecja. Trudniej i wolniej — i właśnie dlatego skuteczniej.</p>
+ <p><b>4. Powtórki rozłożone.</b> Sześć powtórek w odstępach rosnących jest warte więcej niż
+ sześć powtórek jednego dnia. Harmonogram masz w ćwiczeniu poniżej.</p>
+ <p><b>5. Elaboracja.</b> Przy każdym fakcie pytaj „dlaczego to wynika z tamtego". Dlaczego
+ hoplita ma prawa polityczne? Bo sam kupuje uzbrojenie. Fakt powiązany przyczynowo z innym
+ faktem trzyma się w pamięci nieporównanie lepiej niż fakt samotny — a to jest właśnie różnica
+ między wiedzą a listą haseł.</p>`,
+ works:[['Cyceron','<i>O mówcy</i> — źródło opowieści o Symonidesie i o sztuce pamięci'],
+        ['Kwintylian','<i>Kształcenie mówcy</i> — rzymski podręcznik z rozdziałem o pamięci']],
+ terms:[['ars memoriae','Sztuka pamięci: technika przypisywania treści do wyobrażonych miejsc.'],
+        ['metoda miejsc','Umieszczanie zapamiętywanych treści w kolejnych punktach dobrze znanej trasy.'],
+        ['efekt testowania','Próba przywołania materiału poprawia zapamiętanie silniej niż ponowne czytanie.'],
+        ['powtórki rozłożone','Powtarzanie w rosnących odstępach czasu zamiast masowo jednego dnia.'],
+        ['przeplatanie','Mieszanie różnych tematów w jednej sesji zamiast opanowywania ich po kolei.'],
+        ['elaboracja','Wiązanie nowego faktu z posiadaną wiedzą przez pytanie „dlaczego".']],
+ ex:{type:'palace'},
+ quiz:[{q:'Sztukę pamięci tradycja przypisuje:',
+        o:['Cyceronowi','Symonidesowi z Keos','Kwintylianowi','Arystotelesowi'],c:1,
+        e:'Opowieść o zawalonym stropie zapisał Cyceron w dialogu „O mówcy", ale wynalazek przypisuje Symonidesowi — poecie, który jest też w rozdziale o liryce.'},
+       {q:'Skuteczniejsze od ponownego przeczytania notatki jest:',
+        o:['przepisanie jej na czysto','podkreślenie najważniejszych zdań','zamknięcie jej i odtworzenie materiału z pamięci','przeczytanie jej na głos'],c:2,
+        e:'Trzy pierwsze dają poczucie płynności, które łatwo pomylić ze znajomością materiału. Wysiłek przywołania jest tym, co buduje trwały ślad.'},
+       {q:'Przeplatanie tematów w nauce:',
+        o:['przyspiesza naukę i jest przyjemniejsze','spowalnia naukę doraźnie, ale poprawia trwałość i transfer','ma sens tylko przy przedmiotach ścisłych','jest równoważne z uczeniem się blokami'],c:1,
+        e:'To klasyczna „pożądana trudność": gorsze wyniki w trakcie sesji, wyraźnie lepsze po tygodniach. Blokowanie daje odwrotny układ i dlatego jest tak kuszące.'}],
+ prompt:'Zbuduj swój pałac pamięci w ćwiczeniu powyżej, a tutaj zapisz, którą trasę wybrałeś i dlaczego akurat ją znasz tak dobrze.'
+}
+];
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   ĆWICZENIA — jedenaście silników, po jednym na typ zadania.
+   Każdy dostaje moduł i element gospodarza, sam sobie wypełnia HTML i podpina
+   obsługę. Stan trafia do kS.ex[id] i przeżywa przeładowanie strony.
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+const kShuffle=a=>{const b=a.slice();
+  for(let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]]}
+  return b};
+const kABC='ABCDEFGHIJKL';
+
+/* oznaczenie postępu ćwiczenia w nagłówku sekcji */
+function kExDone(id,txt){
+  kS.ex[id]=Object.assign(kS.ex[id]||{},{done:true,label:txt}); kSave();
+  const t=el('tEx'); if(t){t.textContent=txt; t.classList.add('ok')}
+  kPaintRows();
+}
+
+/* ── 0. diagnoza ───────────────────────────────────────────────────────────── */
+const K_DIAG=[
+ {q:'Czy Wergiliusz — autor Eneidy — mógł spotkać Jezusa?',
+  o:['Tak, byli współcześni','Nie, Wergiliusz zmarł kilkanaście lat wcześniej','Tak, ale tylko jako starzec','Nie, Wergiliusz żył kilkaset lat później'],c:1,
+  e:'Wergiliusz zmarł w 19 r. p.n.e., Jezus urodził się ok. 4 r. p.n.e. Dzieli ich piętnaście lat. Współczesny Jezusowi był natomiast Owidiusz — ale przebywał wtedy na wygnaniu nad Morzem Czarnym.'},
+ {q:'Ile mniej więcej lat dzieli akcję Eneidy od momentu jej napisania?',
+  o:['Kilkanaście — to relacja niemal współczesna','Około stu lat','Około tysiąca stu pięćdziesięciu lat','Eneida opisuje czasy autora'],c:2,
+  e:'Akcja toczy się ok. 1184 r. p.n.e., Wergiliusz pisze od 29 r. p.n.e. To dystans jak od Mieszka I do dziś. Eneida jest mitem założycielskim, nie reportażem.'},
+ {q:'Kiedy zaczyna się cesarstwo rzymskie?',
+  o:['31 p.n.e. — bitwa pod Akcjum','27 p.n.e. — Oktawian otrzymuje tytuł Augusta','44 p.n.e. — zabójstwo Cezara','Każda z pierwszych dwóch dat da się obronić'],c:3,
+  e:'To pytanie bez jednej odpowiedzi i właśnie dlatego dobre. Akcjum kończy wojny domowe, 27 r. daje tytuł i formalne „przywrócenie republiki", a ustrój domyka się dopiero w 23 r. Historyk musi umieć uzasadnić wybór cezury, nie tylko ją zapamiętać.'}
+];
+function kExDiag(m,h){
+  const st=kS.diag||{};
+  h.innerHTML=`<div class="ex"><p class="q">${esc('Odpowiedz z głowy. Odpowiedzi zostaną zapisane i odsłonięte dopiero w module XIV — razem z wyjaśnieniami.')}</p>
+   <div id="dgW"></div></div>`;
+  const w=el('dgW');
+  K_DIAG.forEach((d,i)=>{
+    const picked=st['q'+i];
+    const box=document.createElement('div');
+    box.style.marginBottom='18px';
+    box.innerHTML=`<p class="q">${i+1}. ${esc(d.q)}</p><div class="opts">`+
+      d.o.map((o,j)=>`<button class="opt${picked===j?' pick':''}" data-q="${i}" data-j="${j}"
+        ${picked!==undefined?'disabled':''}><span class="k">${kABC[j]}</span><span>${esc(o)}</span></button>`).join('')+
+      `</div>${picked!==undefined?'<div class="fb good on">Zapisane. Wrócimy do tego na końcu kursu.</div>':''}`;
+    w.appendChild(box);
+  });
+  w.onclick=e=>{
+    const b=e.target.closest('.opt'); if(!b||b.disabled)return;
+    const q=+b.dataset.q, j=+b.dataset.j;
+    kS.diag=kS.diag||{}; kS.diag['q'+q]=j; kSave();
+    kExDiag(m,h);
+    if(Object.keys(kS.diag).length>=K_DIAG.length) kExDone(m.id,'odpowiedzi zapisane');
+  };
+  if(Object.keys(st).length>=K_DIAG.length) kExDone(m.id,'odpowiedzi zapisane');
+}
+/* odsłonięcie w module XIV */
+function kDiagReveal(){
+  const st=kS.diag||{};
+  if(!Object.keys(st).length) return '<p class="ex hint">Nie wypełniłeś diagnozy w module 0 — wróć tam, zanim przeczytasz odpowiedzi.</p>';
+  let ok=0;
+  const rows=K_DIAG.map((d,i)=>{
+    const p=st['q'+i], good=p===d.c; if(good)ok++;
+    return `<div style="margin-bottom:16px">
+      <p class="q">${i+1}. ${esc(d.q)}</p>
+      <div class="opts">${d.o.map((o,j)=>{
+        const cls=j===d.c?'opt good':(j===p?'opt bad':'opt');
+        return `<button class="${cls}" disabled><span class="k">${kABC[j]}</span><span>${esc(o)}${
+          j===p?' <b style="color:var(--bronze)">← Twoja odpowiedź</b>':''}</span></button>`}).join('')}</div>
+      <div class="fb ${good?'good':'bad'} on">${d.e}</div></div>`;
+  }).join('');
+  return `<div class="score"><div class="n">${ok}/${K_DIAG.length}</div>
+    <div class="l">Twoja diagnoza sprzed kursu</div></div>${rows}`;
+}
+
+/* ── sortowanie do koszy ───────────────────────────────────────────────────── */
+function kExSort(m,h){
+  const d=m.ex, saved=(kS.ex[m.id]||{}).place||{};
+  h.innerHTML=`<div class="ex"><p class="q">${d.q}</p>
+    <div class="pool" id="exPool"></div>
+    <div class="bins" id="exBins">${d.bins.map(b=>
+      `<div class="bin" data-b="${b[0]}"><div class="h">${esc(b[1])}<span class="n">0</span></div>
+       <div class="drop"></div></div>`).join('')}</div>
+    <div class="btnrow"><button class="btn gold" id="exGo">Sprawdź</button>
+      <button class="btn" id="exRe">Od nowa</button><span class="sp" id="exSc"></span></div>
+    <div id="exFb"></div></div>`;
+  let sel=null, place=Object.assign({},saved);
+  const items=kShuffle(d.items.map((it,i)=>({i:i,t:it[0],b:it[1]})));
+
+  function paint(){
+    const pool=el('exPool'); pool.innerHTML='';
+    items.forEach(it=>{
+      if(place[it.i]!==undefined)return;
+      pool.insertAdjacentHTML('beforeend',
+        `<button class="tok${sel===it.i?' sel':''}" data-i="${it.i}">${esc(it.t)}</button>`);
+    });
+    d.bins.forEach(b=>{
+      const bin=el('exBins').querySelector(`[data-b="${b[0]}"]`);
+      const drop=bin.querySelector('.drop'); drop.innerHTML='';
+      let n=0;
+      items.forEach(it=>{if(place[it.i]===b[0]){n++;
+        drop.insertAdjacentHTML('beforeend',
+          `<button class="tok" data-i="${it.i}" data-in="1">${esc(it.t)}</button>`)}});
+      bin.querySelector('.n').textContent=n;
+      bin.classList.toggle('hot',sel!==null);
+    });
+  }
+  paint();
+  h.onclick=e=>{
+    const tok=e.target.closest('.tok');
+    if(tok){const i=+tok.dataset.i;
+      if(tok.dataset.in){delete place[i];sel=null}else{sel=sel===i?null:i}
+      paint();return}
+    const bin=e.target.closest('.bin');
+    if(bin&&sel!==null){place[sel]=bin.dataset.b;sel=null;paint();return}
+  };
+  el('exRe').onclick=()=>{place={};sel=null;paint();el('exFb').innerHTML='';el('exSc').textContent=''};
+  el('exGo').onclick=()=>{
+    const total=items.length; let ok=0;
+    items.forEach(it=>{if(place[it.i]===it.b)ok++});
+    el('exSc').textContent=`${ok} / ${total}`;
+    h.querySelectorAll('.bin .tok').forEach(t=>{
+      const it=items.find(x=>x.i===+t.dataset.i);
+      t.classList.add(place[it.i]===it.b?'good':'bad');
+    });
+    el('exFb').innerHTML=d.bins.map(b=>
+      `<div class="fb ${ok===total?'good':'bad'} on" style="margin-top:9px"><b>${esc(b[1])}:</b> ${d.fb[b[0]]}</div>`).join('');
+    kS.ex[m.id]=Object.assign(kS.ex[m.id]||{},{place:place});
+    kExDone(m.id,`${ok}/${total}`);
+  };
+}
+
+/* ── dopasowanie w parach ──────────────────────────────────────────────────── */
+function kExMatch(m,h){
+  const d=m.ex;
+  const L=d.pairs.map((p,i)=>({i:i,t:p[0]})), R=kShuffle(d.pairs.map((p,i)=>({i:i,t:p[1]})));
+  h.innerHTML=`<div class="ex"><p class="q">${d.q}</p>
+    <div class="match">
+      <div class="col"><div class="h">${esc(d.left)}</div>${L.map(x=>
+        `<button class="mi" data-s="l" data-i="${x.i}">${x.t}</button>`).join('')}</div>
+      <div class="col"><div class="h">${esc(d.right)}</div>${R.map(x=>
+        `<button class="mi" data-s="r" data-i="${x.i}">${x.t}</button>`).join('')}</div>
+    </div>
+    <div class="btnrow"><span class="sp" id="exSc">0 / ${L.length}</span></div>
+    <div id="exFb"></div></div>`;
+  let pick=null, done=0;
+  h.onclick=e=>{
+    const b=e.target.closest('.mi'); if(!b||b.classList.contains('done'))return;
+    if(!pick||pick.dataset.s===b.dataset.s){
+      h.querySelectorAll('.mi.sel').forEach(x=>x.classList.remove('sel'));
+      b.classList.add('sel'); pick=b; return;
+    }
+    if(pick.dataset.i===b.dataset.i){
+      const n=++done, tag=kABC[+b.dataset.i];
+      [pick,b].forEach(x=>{x.classList.remove('sel');x.classList.add('done');
+        x.insertAdjacentHTML('afterbegin',`<span class="pair">${tag}</span>`)});
+      pick=null; el('exSc').textContent=`${n} / ${L.length}`;
+      if(n===L.length){
+        el('exFb').innerHTML=`<div class="fb good on">${d.note}</div>`;
+        kExDone(m.id,'komplet');
+      }
+    }else{
+      b.classList.add('miss'); setTimeout(()=>b.classList.remove('miss'),320);
+      pick.classList.remove('sel'); pick=null;
+    }
+  };
+}
+
+/* ── heksametr ─────────────────────────────────────────────────────────────── */
+function kExHex(m,h){
+  const d=m.ex;
+  let feet=[0,0,0,0,0,0];               /* 0 = daktyl, 1 = spondej */
+  h.innerHTML=`<div class="ex"><p class="q">${d.q}</p>
+    <div class="beat" id="hxB"></div>
+    <div class="btnrow"><button class="btn gold" id="hxGo">Sprawdź wers</button>
+      <button class="btn" id="hxTap">Wystukaj rytm</button><span class="sp" id="hxS"></span></div>
+    <div id="hxFb"></div>
+    <div class="txt" style="margin-top:16px">${d.quote}</div>
+    <div class="src">${d.qsrc}</div>
+    <p class="hint" style="margin-top:14px">${d.note}</p></div>`;
+  function paint(){
+    el('hxB').innerHTML=feet.map((f,i)=>{
+      const cell=v=>`<span class="${v}" data-i="${i}">${v==='l'?'–':'∪'}</span>`;
+      return (f?[cell('l'),cell('l')]:[cell('l'),cell('s'),cell('s')]).join('')+
+             (i<5?'<i class="brk"></i>':'');
+    }).join('');
+  }
+  paint();
+  el('hxB').onclick=e=>{const s=e.target.closest('span[data-i]');if(!s)return;
+    const i=+s.dataset.i; if(i===5)return; feet[i]=feet[i]?0:1; paint(); el('hxFb').innerHTML=''};
+  el('hxGo').onclick=()=>{
+    const p5=feet[4]===0, ok=p5;
+    el('hxS').textContent=feet.map(f=>f?'—':'daktyl').filter(Boolean).length?'':'';
+    el('hxFb').innerHTML=`<div class="fb ${ok?'good':'bad'} on">${ok
+      ? '<b>Poprawny heksametr.</b> Piąta stopa jest daktylem, szósta skrócona — reszta może być dowolną kombinacją daktyli i spondejów. Właśnie ta swoboda w pierwszych czterech stopach dawała aojdzie miejsce na dopasowanie gotowych formuł i epitetów.'
+      : '<b>Piąta stopa musi być daktylem.</b> To najsilniejsza reguła heksametru: kadencja końcowa (daktyl + stopa dwusylabowa) jest sygnałem, że wers się kończy. Wers z piątym spondejem istnieje, ale jest rzadkością stosowaną dla efektu.'}</div>`;
+    if(ok)kExDone(m.id,'wers zbudowany');
+  };
+  el('hxTap').onclick=()=>{
+    const cells=[...el('hxB').querySelectorAll('span')]; let i=0;
+    const step=()=>{if(i>0)cells[i-1].classList.remove('hit');
+      if(i>=cells.length)return;
+      cells[i].classList.add('hit');
+      const long=cells[i].classList.contains('l'); i++;
+      setTimeout(step,long?300:150)};
+    step();
+  };
+}
+
+/* ── plan teatru + maszyna konfliktu ───────────────────────────────────────── */
+function kExTheatre(m,h){
+  const d=m.ex;
+  h.innerHTML=`<div class="ex"><p class="q">${d.q}</p>
+   <svg class="diag" viewBox="0 0 420 260" role="group" aria-label="Plan teatru greckiego">
+    <g class="z" data-z="theatron"><path class="sh" d="M30 210A180 180 0 0 1 390 210 Z"/></g>
+    <g class="z" data-z="parodos"><path class="sh" d="M30 210h44l30 -34h-52z"/>
+      <path class="sh" d="M390 210h-44l-30 -34h52z"/></g>
+    <g class="z" data-z="orchestra"><circle class="sh" cx="210" cy="210" r="74"/></g>
+    <g class="z" data-z="proskenion"><rect class="sh" x="126" y="212" width="168" height="20" rx="3"/></g>
+    <g class="z" data-z="skene"><rect class="sh" x="118" y="232" width="184" height="24" rx="3"/></g>
+    <circle class="deco" cx="210" cy="210" r="5" fill="#e0b45f"/>
+    <text class="lbl" x="210" y="96" text-anchor="middle">theatron</text>
+    <text x="210" y="196" text-anchor="middle">orchestra</text>
+    <text x="210" y="249" text-anchor="middle">skene</text>
+    <text x="210" y="226" text-anchor="middle" font-size="7.5">proskenion</text>
+   </svg>
+   <div class="anbox" id="thB"><div class="t">Plan teatru</div>
+     <div class="d">Kliknij część planu, żeby poznać jej funkcję.</div></div>
+
+   <div class="rule" style="margin:22px 0 16px"></div>
+   <p class="q">${esc(d.duel.t)}</p>
+   <div class="cmp">
+     <div class="c"><div class="h">${esc(d.duel.a.n)}</div><ul>${
+       d.duel.a.pts.map(p=>`<li>${esc(p)}</li>`).join('')}</ul></div>
+     <div class="c"><div class="h">${esc(d.duel.b.n)}</div><ul>${
+       d.duel.b.pts.map(p=>`<li>${esc(p)}</li>`).join('')}</ul></div>
+   </div>
+   <div class="btnrow"><button class="btn gold" id="thGo">Pokaż wniosek</button></div>
+   <div id="thFb"></div></div>`;
+  h.querySelector('.diag').onclick=e=>{
+    const z=e.target.closest('.z'); if(!z)return;
+    h.querySelectorAll('.diag .z').forEach(x=>x.classList.toggle('on',x===z));
+    const q=d.zones.find(v=>v[0]===z.dataset.z);
+    el('thB').innerHTML=`<div class="t">${esc(q[1])}</div><div class="d">${esc(q[2])}</div>`;
+  };
+  el('thGo').onclick=()=>{el('thFb').innerHTML=`<div class="fb good on">${esc(d.duel.k)}</div>`;
+    kExDone(m.id,'przerobione')};
+}
+
+/* ── porównanie dwóch modeli ───────────────────────────────────────────────── */
+function kExCmp(m,h){
+  const d=m.ex;
+  h.innerHTML=`<div class="ex"><p class="q">${d.q}</p>
+   <div class="cmp">
+    <div class="c"><div class="h">${esc(d.a.h)}</div><ul>${d.a.li.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>
+    <div class="c"><div class="h">${esc(d.b.h)}</div><ul>${d.b.li.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>
+   </div>
+   <div class="btnrow">
+     ${d.atlas?'<button class="btn gold" id="cmAt">Otwórz atlas wyprawy Aleksandra</button>':''}
+     <button class="btn" id="cmGo">Pokaż wniosek</button></div>
+   <div id="cmFb"></div></div>`;
+  if(d.atlas) el('cmAt').onclick=()=>kMode('atlas');
+  el('cmGo').onclick=()=>{el('cmFb').innerHTML=`<div class="fb good on">${esc(d.k)}</div>`;
+    kExDone(m.id,'przerobione')};
+}
+
+/* ── ustrój republiki ──────────────────────────────────────────────────────── */
+function kExRepublic(m,h){
+  const d=m.ex;
+  h.innerHTML=`<div class="ex"><p class="q">${d.q}</p>
+   <svg class="diag" viewBox="0 0 420 250" role="group" aria-label="Ustrój republiki rzymskiej">
+    <defs><marker id="kAr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5"
+      orient="auto"><path d="M0 0l10 5-10 5z" fill="#9c8055"/></marker></defs>
+    <g stroke="#9c8055" stroke-width="1.3" fill="none" marker-end="url(#kAr)" opacity=".65">
+      <path d="M210 62v34"/><path d="M150 122h-38v-46h-10"/><path d="M270 122h40v-46h6"/>
+      <path d="M210 152v32"/></g>
+    <g class="z" data-z="pop"><rect class="sh" x="120" y="26" width="180" height="36" rx="8"/></g>
+    <g class="z" data-z="mag"><rect class="sh" x="150" y="96" width="120" height="34" rx="8"/></g>
+    <g class="z" data-z="sen"><rect class="sh" x="300" y="52" width="106" height="34" rx="8"/></g>
+    <g class="z" data-z="tri"><rect class="sh" x="16" y="52" width="96" height="34" rx="8"/></g>
+    <g class="z" data-z="dic"><rect class="sh" x="146" y="184" width="128" height="34" rx="8"/></g>
+    <text class="lbl" x="210" y="48" text-anchor="middle">zgromadzenia</text>
+    <text class="lbl" x="210" y="117" text-anchor="middle">urzędnicy</text>
+    <text class="lbl" x="353" y="73" text-anchor="middle">senat</text>
+    <text class="lbl" x="64" y="73" text-anchor="middle">trybun</text>
+    <text class="lbl" x="210" y="205" text-anchor="middle">dyktator</text>
+    <text x="70" y="98" text-anchor="middle" font-size="7.5" fill="#e2aec6">VETO</text>
+   </svg>
+   <div class="anbox" id="rpB"><div class="t">Ustrój republiki</div>
+     <div class="d">Kliknij element schematu, żeby poznać jego rolę.</div></div>
+   <div class="btnrow"><button class="btn gold" id="rpGo">Gdzie to pękło?</button></div>
+   <div id="rpFb"></div></div>`;
+  h.querySelector('.diag').onclick=e=>{
+    const z=e.target.closest('.z'); if(!z)return;
+    h.querySelectorAll('.diag .z').forEach(x=>x.classList.toggle('on',x===z));
+    const q=d.nodes.find(v=>v[0]===z.dataset.z);
+    el('rpB').innerHTML=`<div class="t">${esc(q[1])}</div><div class="d">${q[2]}</div>`;
+  };
+  el('rpGo').onclick=()=>{el('rpFb').innerHTML=`<div class="fb bad on">${esc(d.k)}</div>`;
+    kExDone(m.id,'przerobione')};
+}
+
+/* ── close reading z adnotacjami ───────────────────────────────────────────── */
+function kExAnnot(m,h){
+  const d=m.ex; const seen=new Set(((kS.ex[m.id]||{}).seen)||[]);
+  const total=d.lines.reduce((s,l)=>s+l.an.length,0);
+  h.innerHTML=`<div class="ex"><p class="q">${d.q}</p>
+   <div class="txt">${d.lines.map((l,i)=>{
+     const pl=esc(l.pl);
+     return `<span class="v" data-i="${i}">
+       <i style="color:var(--bronze);font-size:.82em;letter-spacing:.04em">${esc(l.la)}</i><br>
+       ${l.an.map((a,j)=>`<span class="an" data-i="${i}" data-j="${j}">${esc(a[1])}</span>`).join(' · ')}
+       <br><b style="font-weight:430">${pl}</b><br><br></span>`}).join('')}</div>
+   <div class="anbox" id="anB"><div class="t">Adnotacje</div>
+     <div class="d">Kliknij podkreślony chwyt, żeby zobaczyć, na czym polega.</div></div>
+   <div class="btnrow"><span class="sp" id="anS">${seen.size} / ${total}</span></div>
+   <div class="src">${d.src}</div>
+   <div id="anFb"></div></div>`;
+  h.querySelector('.txt').onclick=e=>{
+    const a=e.target.closest('.an'); if(!a)return;
+    h.querySelectorAll('.an').forEach(x=>x.classList.toggle('on',x===a));
+    const q=d.lines[+a.dataset.i].an[+a.dataset.j];
+    el('anB').innerHTML=`<div class="t">${esc(q[1])}</div><div class="d">${esc(q[2])}</div>
+      <div class="e">${esc(d.lines[+a.dataset.i].la)}</div>`;
+    seen.add(a.dataset.i+'-'+a.dataset.j);
+    el('anS').textContent=`${seen.size} / ${total}`;
+    kS.ex[m.id]=Object.assign(kS.ex[m.id]||{},{seen:[...seen]}); kSave();
+    if(seen.size>=total){
+      el('anFb').innerHTML=`<div class="fb good on">${esc(d.k)}</div>`;
+      kExDone(m.id,'komplet adnotacji');
+    }
+  };
+  if(seen.size>=total) el('anFb').innerHTML=`<div class="fb good on">${esc(d.k)}</div>`;
+}
+
+/* ── układanie w kolejności ────────────────────────────────────────────────── */
+function kSeqWidget(host,items,onCheck){
+  let order=kShuffle(items.map((x,i)=>i));
+  function paint(){
+    host.innerHTML=`<div class="seq">${order.map((oi,pos)=>{
+      const it=items[oi];
+      return `<div class="seqrow" draggable="true" data-pos="${pos}">
+        <span class="gr">⋮⋮</span><span class="nm">${esc(it[0])}</span>
+        <span class="yr">${it[1]<0?Math.abs(it[1])+' p.n.e.':it[1]+' n.e.'}</span>
+        <span class="mv"><button data-d="-1" aria-label="W górę">▲</button>
+        <button data-d="1" aria-label="W dół">▼</button></span></div>`}).join('')}</div>`;
+  }
+  paint();
+  host.onclick=e=>{
+    const b=e.target.closest('.mv button'); if(!b)return;
+    const row=b.closest('.seqrow'), p=+row.dataset.pos, d=+b.dataset.d, q=p+d;
+    if(q<0||q>=order.length)return;
+    [order[p],order[q]]=[order[q],order[p]]; paint();
+  };
+  let drag=null;
+  host.addEventListener('dragstart',e=>{const r=e.target.closest('.seqrow');if(!r)return;
+    drag=+r.dataset.pos;r.classList.add('drag')});
+  host.addEventListener('dragend',e=>{host.querySelectorAll('.seqrow').forEach(r=>
+    r.classList.remove('drag','over'))});
+  host.addEventListener('dragover',e=>{e.preventDefault();
+    const r=e.target.closest('.seqrow');if(!r)return;
+    host.querySelectorAll('.seqrow').forEach(x=>x.classList.toggle('over',x===r))});
+  host.addEventListener('drop',e=>{e.preventDefault();
+    const r=e.target.closest('.seqrow');if(!r||drag===null)return;
+    const to=+r.dataset.pos, mv=order.splice(drag,1)[0];
+    order.splice(to,0,mv); drag=null; paint()});
+  return {
+    check(){
+      const good=items.map((x,i)=>i).sort((a,b)=>items[a][1]-items[b][1]);
+      let ok=0;
+      host.querySelectorAll('.seqrow').forEach((r,pos)=>{
+        const right=order[pos]===good[pos];
+        if(right)ok++;
+        r.classList.add('rev',right?'ok':'no');
+      });
+      return ok;
+    }
+  };
+}
+function kExSeq(m,h){
+  const d=m.ex;
+  h.innerHTML=`<div class="ex"><p class="q">${d.q}</p><div id="sqW"></div>
+   <div class="btnrow"><button class="btn gold" id="sqGo">Sprawdź kolejność</button>
+     <span class="sp" id="sqS"></span></div><div id="sqFb"></div></div>`;
+  const w=kSeqWidget(el('sqW'),d.items);
+  el('sqGo').onclick=()=>{
+    const ok=w.check();
+    el('sqS').textContent=`${ok} / ${d.items.length}`;
+    el('sqFb').innerHTML=`<div class="fb ${ok===d.items.length?'good':'bad'} on">${esc(d.k)}</div>`;
+    kExDone(m.id,`${ok}/${d.items.length}`);
+  };
+}
+
+/* ── moduł XIV: wielka układanka + kalkulator dystansu ─────────────────────── */
+const K_TIME=[
+ ['Pismo klinowe w Sumerze',-3200],['Piramidy w Gizie',-2600],['Kodeks Hammurabiego',-1750],
+ ['Upadek Troi wedle Eratostenesa',-1184],['Świątynia Salomona',-960],
+ ['Pierwsze igrzyska olimpijskie',-776],['Legendarne założenie Rzymu',-753],
+ ['Reformy Klejstenesa',-508],['Bitwa pod Maratonem',-490],['Antygona Sofoklesa',-441],
+ ['Śmierć Sokratesa',-399],['Wyprawa Aleksandra Wielkiego',-334],
+ ['Zburzenie Kartaginy',-146],['Zabójstwo Cezara',-44],['Bitwa pod Akcjum',-31],
+ ['Oktawian zostaje Augustem',-27],['Śmierć Wergiliusza',-19],['Narodziny Jezusa (ok.)',-4],
+ ['Prześladowania za Nerona',64],['Edykt mediolański',313],['Edykt tesaloński',380],
+ ['Upadek cesarstwa zachodniego',476]
+];
+function kExTimeline(m,h){
+  h.innerHTML=`<div class="ex">
+   <p class="q">Ułóż dwadzieścia dwa wydarzenia w kolejności chronologicznej. Przeciągnij albo użyj strzałek.</p>
+   <div id="sqW"></div>
+   <div class="btnrow"><button class="btn gold" id="sqGo">Sprawdź</button>
+     <span class="sp" id="sqS"></span></div><div id="sqFb"></div>
+
+   <div class="rule" style="margin:24px 0 16px"></div>
+   <p class="q">Kalkulator dystansu czasowego</p>
+   <p class="hint">Liczy poprawnie przez granicę er — bez roku zerowego. Podaj rok ujemny dla p.n.e.
+     (np. <b>-19</b> to 19 p.n.e.), dodatni dla n.e.</p>
+   <div class="calc">
+     <label for="cA">Od roku</label><input class="field num" id="cA" type="number" value="-19">
+     <label for="cB">do roku</label><input class="field num" id="cB" type="number" value="64">
+   </div>
+   <div class="calcout" id="cOut"></div>
+
+   <div class="rule" style="margin:24px 0 16px"></div>
+   <p class="q">Twoja diagnoza sprzed kursu</p>
+   <div id="dgR"></div></div>`;
+  const w=kSeqWidget(el('sqW'),K_TIME);
+  el('sqGo').onclick=()=>{
+    const ok=w.check();
+    el('sqS').textContent=`${ok} / ${K_TIME.length}`;
+    el('sqFb').innerHTML=`<div class="fb ${ok>=K_TIME.length-2?'good':'bad'} on">${
+      ok===K_TIME.length?'Komplet. Masz w głowie kręgosłup całej epoki — od pisma klinowego po 476 rok.'
+      :'Sprawdź zwłaszcza okolice przełomu er: Akcjum, tytuł Augusta, śmierć Wergiliusza i narodziny Jezusa mieszczą się w trzydziestu latach, a bywają rozrzucane po stuleciach.'}</div>`;
+    kExDone(m.id,`${ok}/${K_TIME.length}`);
+  };
+  function calc(){
+    const a=parseInt(el('cA').value,10), b=parseInt(el('cB').value,10);
+    if(isNaN(a)||isNaN(b)){el('cOut').textContent='Podaj dwie liczby.';return}
+    const n=kSpan(a,b), naive=Math.abs(b-a);
+    const cross=(a<0&&b>0)||(a>0&&b<0);
+    el('cOut').innerHTML=`Od <b>${kYr(a)}</b> do <b>${kYr(b)}</b> mija <b>${n}</b> ${
+      n===1?'rok':(n%10>=2&&n%10<=4&&(n%100<10||n%100>=20)?'lata':'lat')}.`+
+      (cross?`<br><span style="color:var(--mute);font-size:.92em">Odejmowanie „na skróty" dałoby ${naive} —
+        o jeden za dużo, bo po 1 p.n.e. następuje od razu 1 n.e. Roku zerowego nie ma.</span>`:'');
+  }
+  el('cA').oninput=calc; el('cB').oninput=calc; calc();
+  el('dgR').innerHTML=kDiagReveal();
+}
+
+/* ── pałac pamięci ─────────────────────────────────────────────────────────── */
+const K_ROOMS=[
+ ['Czym jest antyk','pismo jako granica — coś, co zapisuje: tablica, ekran, rylec'],
+ ['Bliski Wschód','glina i cegła — zikkurat, stela Hammurabiego'],
+ ['Stary Testament','zwój i tablice — przymierze zapisane'],
+ ['Nowy Testament','ziarno i droga — siewca, Samarytanin'],
+ ['Mit i epos','tarcza i lira — Achilles, aojda'],
+ ['Liryka','kielich i pomnik — carpe diem i exegi monumentum'],
+ ['Teatr','maska — dwie twarze, dwie racje'],
+ ['Filozofia','jaskinia i cień na ścianie'],
+ ['Historia Grecji','falanga i skorupka do głosowania'],
+ ['Rzym: republika','krzesło kurulne i słowo VETO'],
+ ['Złoty wiek','pióro i proroctwo — Eneasz niosący ojca'],
+ ['Cesarstwo','wieniec i krzyż — od Nerona do Konstantyna'],
+ ['Dziedzictwo','lustro — antyk odbity w późniejszych epokach'],
+ ['Oś czasu','szew między mitem a historią — rok 753'],
+ ['Metoda','zawalony strop u Symonidesa']
+];
+const K_SCHED=[
+ ['D+0','Dzień kursu: przerób moduły, rozwiąż quizy, zbuduj pałac.','~4 h'],
+ ['D+1','Odtwórz z pamięci oś czasu i trzynaście pokoi. Nie zaglądaj — dopiero potem sprawdź.','25 min'],
+ ['D+3','Przejdź fiszki. Wszystko, co poszło opornie, wraca do pierwszego pudełka.','20 min'],
+ ['D+7','Quizy raz jeszcze, tym razem przeplatane: losowo, nie po kolei.','30 min'],
+ ['D+16','Wytłumacz na głos paradoks Wergiliusza w 90 sekund. Potem trzy toposy i konflikt tragiczny.','20 min'],
+ ['D+35','Ostatni przebieg całości. To, co przetrwa do tego dnia, zostaje na lata.','30 min']
+];
+function kExPalace(m,h){
+  const saved=(kS.ex[m.id]||{}).rooms||{};
+  h.innerHTML=`<div class="ex">
+   <p class="q">Pałac pamięci. Wybierz trasę, którą znasz na pamięć — drogę do szkoły, własne
+     mieszkanie, ulubioną trasę biegową. Piętnaście punktów na tej trasie to piętnaście pokoi.
+     W każdym umieść jeden konkretny, przesadny obraz. Im dziwniejszy, tym lepiej się trzyma.</p>
+   <div class="palace" id="plW">${K_ROOMS.map((r,i)=>
+     `<div class="room${saved[i]?' filled':''}"><div class="n">${i+1}</div>
+       <div class="bd"><div class="ti">${esc(r[0])}</div>
+         <div class="cue">podpowiedź: ${esc(r[1])}</div>
+         <input class="field" data-i="${i}" value="${esc(saved[i]||'')}"
+           placeholder="Twój obraz w tym miejscu trasy…"></div></div>`).join('')}</div>
+   <div class="btnrow"><span class="sp" id="plS"></span></div>
+
+   <div class="rule" style="margin:24px 0 16px"></div>
+   <p class="q">Harmonogram powtórek</p>
+   <p class="hint">Sześć podejść w rosnących odstępach. Każde kolejne jest krótsze, bo materiał
+     stawia coraz mniejszy opór — pod warunkiem, że nie pominiesz żadnego.</p>
+   <div class="sched">${K_SCHED.map(s=>
+     `<div class="day"><span class="d">${esc(s[0])}</span><span class="w">${esc(s[1])}</span>
+       <span class="m">${esc(s[2])}</span></div>`).join('')}</div></div>`;
+  const upd=()=>{
+    const n=Object.values(saved).filter(v=>v&&v.trim()).length;
+    el('plS').textContent=`${n} / ${K_ROOMS.length} pokoi umeblowanych`;
+    if(n>=K_ROOMS.length)kExDone(m.id,'pałac gotowy');
+  };
+  el('plW').addEventListener('input',e=>{
+    const f=e.target.closest('.field'); if(!f)return;
+    saved[+f.dataset.i]=f.value;
+    f.closest('.room').classList.toggle('filled',!!f.value.trim());
+    kS.ex[m.id]=Object.assign(kS.ex[m.id]||{},{rooms:saved}); kSave(); upd();
+  });
+  upd();
+}
+
+const K_EX={diag:kExDiag,sort:kExSort,match:kExMatch,hex:kExHex,theatre:kExTheatre,
+            cmp:kExCmp,republic:kExRepublic,annot:kExAnnot,seq:kExSeq,
+            timeline:kExTimeline,palace:kExPalace};
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   SPIĘCIE — stan, tryby, panel modułu, quizy, fiszki, eksport, klawiatura.
+   ══════════════════════════════════════════════════════════════════════════════ */
+const K_KEY='antyk.kurs.v1';
+let kS={mod:0,done:{},quiz:{},notes:{},ex:{},cards:{},diag:{},seen:{}};
+try{const raw=localStorage.getItem(K_KEY); if(raw)kS=Object.assign(kS,JSON.parse(raw))}catch(e){}
+function kSave(){try{localStorage.setItem(K_KEY,JSON.stringify(kS))}catch(e){}}
+
+/* ══════════════ tryby ══════════════ */
+function kMode(mode){
+  document.body.dataset.mode=mode;
+  el('bModeT').textContent=mode==='kurs'?'Atlas':'Kurs';
+  el('bMode').title=mode==='kurs'?'Przejdź do atlasu wyprawy Aleksandra':'Wróć do kursu';
+  if(mode==='atlas'){
+    el('hTitle').innerHTML='Podboje <em>Aleksandra Wielkiego</em>';
+    el('hRange').textContent='336–323 p.n.e.';
+    measure(); clamp(tgt); apply(); declutter(); thinYears();
+  }else{
+    el('hTitle').innerHTML='Antyk &mdash; <em>kurs interaktywny</em>';
+    el('hRange').textContent='3200 p.n.e. – 476 n.e.';
+    stop();
+    kMeasure(); kClamp(kTgt); kApply();
+  }
+  el('panel').scrollTop=0;
+}
+
+/* ══════════════ lista modułów i postęp ══════════════ */
+function kPaintRows(){
+  el('mRows').innerHTML=MOD.map((m,i)=>
+    `<div class="row${i===kS.mod?' on':''}${kS.done[m.id]?' done':''}" data-i="${i}">
+      <span class="dot"></span><span class="yr mono">${m.n||'—'}</span>
+      <span class="nm">${esc(m.t)}</span></div>`).join('');
+  const n=MOD.filter(m=>kS.done[m.id]).length;
+  el('hProgN').textContent=`${n} / ${MOD.length}`;
+  el('hProgBar').style.width=(n/MOD.length*100).toFixed(1)+'%';
+  el('cProg').style.width=(kS.mod/(MOD.length-1)*100).toFixed(2)+'%';
+  document.querySelectorAll('#cTicks .tk').forEach(b=>{
+    const i=+b.dataset.i;
+    b.classList.toggle('on',i===kS.mod);
+    b.classList.toggle('pass',!!kS.done[MOD[i].id]);
+  });
+  document.querySelectorAll('#cLabels .yl').forEach(y=>
+    y.classList.toggle('on',+y.dataset.i===kS.mod));
+}
+
+/* ══════════════ quiz ══════════════ */
+function kQuiz(m){
+  const host=el('mQuiz');
+  if(!m.quiz.length){host.innerHTML='<p class="ex hint">Ten moduł nie ma quizu — jego sprawdzianem jest samo ćwiczenie.</p>';
+    el('tQuiz').textContent=''; el('tQuiz').classList.remove('ok'); return}
+  const saved=kS.quiz[m.id]||{};
+  host.innerHTML=m.quiz.map((q,i)=>{
+    const p=saved[i];
+    return `<div style="margin-bottom:20px" data-q="${i}">
+      <p class="q">${i+1}. ${esc(q.q)}</p>
+      <div class="opts">${q.o.map((o,j)=>{
+        let cls='opt';
+        if(p!==undefined){
+          if(j===q.c)cls='opt good';
+          else if(j===p)cls='opt bad';
+        }
+        return `<button class="${cls}" data-q="${i}" data-j="${j}" ${p!==undefined?'disabled':''}>
+          <span class="k">${kABC[j]}</span><span>${esc(o)}</span></button>`}).join('')}</div>
+      <div class="fb ${p===q.c?'good':'bad'}${p!==undefined?' on':''}">${esc(q.e)}</div></div>`;
+  }).join('')+`<div class="btnrow"><button class="btn" id="qzRe">Rozwiąż jeszcze raz</button>
+    <span class="sp" id="qzS"></span></div>`;
+  const score=()=>{
+    const s=kS.quiz[m.id]||{}, done=Object.keys(s).length;
+    const ok=m.quiz.filter((q,i)=>s[i]===q.c).length;
+    el('qzS').textContent=done?`${ok} / ${m.quiz.length}`:'';
+    const t=el('tQuiz');
+    if(done>=m.quiz.length){t.textContent=`${ok}/${m.quiz.length}`;t.classList.add('ok')}
+    else{t.textContent=done?`${done}/${m.quiz.length}`:'';t.classList.remove('ok')}
+  };
+  score();
+  host.onclick=e=>{
+    const b=e.target.closest('.opt');
+    if(b&&!b.disabled){
+      const i=+b.dataset.q, j=+b.dataset.j;
+      kS.quiz[m.id]=Object.assign(kS.quiz[m.id]||{},{[i]:j}); kSave();
+      kQuiz(m); return;
+    }
+    if(e.target.closest('#qzRe')){delete kS.quiz[m.id];kSave();kQuiz(m)}
+  };
+}
+
+/* ══════════════ pojęcia ══════════════ */
+function kTerms(m){
+  const host=el('mTerms'), def=el('mDef');
+  if(!m.terms.length){host.innerHTML='<p class="ex hint">Ten moduł nie wprowadza nowych pojęć.</p>';
+    el('tTerms').textContent='';return}
+  host.innerHTML=m.terms.map((t,i)=>
+    `<button class="term${kS.seen[t[0]]?' seen':''}" data-i="${i}">${esc(t[0])}</button>`).join('');
+  el('tTerms').textContent=m.terms.length+' poj.';
+  def.classList.remove('on');
+  host.onclick=e=>{
+    const b=e.target.closest('.term'); if(!b)return;
+    const t=m.terms[+b.dataset.i];
+    def.innerHTML=`<div class="t">${esc(t[0])}</div><div class="d">${esc(t[1])}</div>`;
+    def.classList.add('on');
+    b.classList.add('seen'); kS.seen[t[0]]=1; kSave();
+  };
+}
+
+/* ══════════════ przejście do modułu ══════════════ */
+function kGo(i,scroll){
+  i=Math.max(0,Math.min(MOD.length-1,i));
+  kS.mod=i; kSave();
+  const m=MOD[i], kd=K_KIND[m.k];
+  const c=el('mKind'); c.textContent=kd[0]; c.className='chip '+kd[1];
+  el('mIdx').textContent=`Moduł ${m.n||'0'} · ${i+1} z ${MOD.length}`;
+  el('mMins').textContent='~'+m.mins+' min';
+  el('mTitle').textContent=m.t;
+  el('mWhen').textContent=m.when;
+  el('mLead').innerHTML=m.lead;
+  el('mAxis').innerHTML='<b>Na osi:</b> '+esc(m.axis);
+  el('mPrompt').textContent=m.prompt;
+  el('mNoteF').value=kS.notes[m.id]||'';
+  el('tNote').textContent=kS.notes[m.id]?'zapisane':'';
+  el('tNote').classList.toggle('ok',!!kS.notes[m.id]);
+
+  /* dzieła */
+  const w=el('mWorks');
+  if(m.works.length){
+    w.innerHTML=m.works.map(x=>
+      `<div class="work"><span class="au">${esc(x[0])}</span><span class="ti">${x[1]}</span></div>`).join('');
+    el('tWorks').textContent=m.works.length+' poz.';
+    el('aWorks').style.display='';
+  }else{el('aWorks').style.display='none'}
+
+  kTerms(m); kQuiz(m);
+
+  /* ćwiczenie */
+  const t=el('tEx');
+  const st=kS.ex[m.id];
+  t.textContent=st&&st.label?st.label:''; t.classList.toggle('ok',!!(st&&st.done));
+  const eng=K_EX[m.ex?m.ex.type:null];
+  if(eng)eng(m,el('mEx'));
+  else el('mEx').innerHTML='<p class="ex hint">—</p>';
+
+  /* scena */
+  if(m.zone){kZone(m.zone[0],m.zone[1],m.zone[2]); kZoomTo(m.zone[0],m.zone[1],m.zone[2])}
+  else kZone(null);
+  if(m.id==='m11'||m.id==='m14'){el('cPara').checked=true;el('chPara').style.display=''}
+
+  el('cScrub').value=i;
+  kPaintRows();
+  if(scroll)el('panel').scrollTop=0;
+}
+
+/* ══════════════ oś kursu ══════════════ */
+{
+  let tk='',yl='';
+  MOD.forEach((m,i)=>{
+    const pos=(i/(MOD.length-1)*100).toFixed(3);
+    const big=['y','t'].includes(m.k)?' big':'';
+    tk+=`<button class="tk${big}" data-i="${i}" style="left:${pos}%" title="${esc(m.t)}"
+          aria-label="${esc(m.t)}"></button>`;
+    yl+=`<span class="yl" data-i="${i}" style="left:${pos}%">${m.n||'0'}</span>`;
+  });
+  el('cTicks').innerHTML=tk; el('cLabels').innerHTML=yl;
+  el('cScrub').max=MOD.length-1;
+}
+/* przerzedzanie numerów modułów — ten sam problem i to samo lekarstwo co w osi atlasu */
+function kThin(){
+  const tw=el('cTrack').clientWidth||600; let lastX=-1e9;
+  document.querySelectorAll('#cLabels .yl').forEach(y=>{
+    const x=parseFloat(y.style.left)/100*tw;
+    if(x-lastX<26){y.style.display='none'}else{y.style.display='';lastX=x}
+  });
+}
+new ResizeObserver(kThin).observe(el('cTrack'));
+kThin();
+el('cTicks').onclick=e=>{const b=e.target.closest('.tk');if(!b)return;kGo(+b.dataset.i,true)};
+el('cLabels').onclick=e=>{const b=e.target.closest('.yl');if(!b)return;kGo(+b.dataset.i,true)};
+el('cScrub').oninput=e=>kGo(+e.target.value,true);
+el('cPrev').onclick=()=>kGo(kS.mod-1,true);
+el('cNext').onclick=()=>kGo(kS.mod+1,true);
+el('cDone').onclick=()=>{
+  const m=MOD[kS.mod];
+  kS.done[m.id]=!kS.done[m.id]; kSave(); kPaintRows();
+  if(kS.done[m.id]&&kS.mod<MOD.length-1)kGo(kS.mod+1,true);
+};
+el('mRows').onclick=e=>{const r=e.target.closest('.row');if(!r)return;
+  kGo(+r.dataset.i,true);
+  if(window.innerWidth<=960)el('stage').scrollIntoView({behavior:'smooth',block:'start'})};
+el('mNoteF').oninput=e=>{
+  const m=MOD[kS.mod];
+  kS.notes[m.id]=e.target.value; kSave();
+  el('tNote').textContent=e.target.value?'zapisane':'';
+  el('tNote').classList.toggle('ok',!!e.target.value);
+};
+
+/* ══════════════ fiszki — trzy pudełka Leitnera ══════════════ */
+const K_CARDS=(()=>{const a=[];MOD.forEach(m=>m.terms.forEach(t=>a.push({t:t[0],d:t[1],m:m.t})));return a})();
+{
+  const box=document.createElement('div');
+  box.className='modal'; box.id='cardsM';
+  box.innerHTML=`<div class="box"><div class="hd"><h3>FISZKI</h3>
+    <button class="x" id="cdX" aria-label="Zamknij">&times;</button></div>
+    <div class="bd">
+      <div class="card" id="cdC"><div><div class="front"></div><div class="back"></div>
+        <div class="tap">kliknij, żeby odsłonić</div></div></div>
+      <div class="btnrow"><button class="btn" id="cdBad">Jeszcze nie</button>
+        <button class="btn gold" id="cdOk">Umiem</button>
+        <span class="sp" id="cdN"></span></div>
+      <div class="boxes">
+        <div class="b" id="cdB1"><b>0</b>Pudełko 1</div>
+        <div class="b" id="cdB2"><b>0</b>Pudełko 2</div>
+        <div class="b" id="cdB3"><b>0</b>Opanowane</div>
+      </div>
+      <p class="ex hint" style="margin-top:16px">Pudełko 1 wraca najczęściej, pudełko 3 najrzadziej.
+        Błąd zawsze cofa fiszkę do pudełka 1 — to nie kara, tylko sedno metody: powtarzasz to,
+        czego nie umiesz, a nie to, co już umiesz.</p>
+    </div></div>`;
+  document.body.appendChild(box);
+}
+let kCard=null;
+function kCardPick(){
+  const b=n=>K_CARDS.filter(c=>(kS.cards[c.t]||1)===n);
+  const pool=b(1).length?b(1):(b(2).length?b(2):b(3));
+  [1,2,3].forEach(n=>el('cdB'+n).querySelector('b').textContent=b(n).length);
+  [1,2,3].forEach(n=>el('cdB'+n).classList.toggle('on',pool.length&&(kS.cards[pool[0].t]||1)===n));
+  if(!pool.length)return null;
+  return pool[Math.floor(Math.random()*pool.length)];
+}
+function kCardShow(){
+  kCard=kCardPick();
+  const c=el('cdC');
+  c.classList.remove('flip');
+  if(!kCard){c.querySelector('.front').textContent='Komplet.';
+    c.querySelector('.back').textContent='Wszystkie pojęcia w pudełku trzecim.';
+    el('cdN').textContent='';return}
+  c.querySelector('.front').textContent=kCard.t;
+  c.querySelector('.back').innerHTML=esc(kCard.d)+
+    `<div style="font-family:var(--sans);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--mute2);margin-top:12px">${esc(kCard.m)}</div>`;
+  el('cdN').textContent=`${K_CARDS.length} pojęć w kursie`;
+}
+el('cdC').onclick=()=>el('cdC').classList.toggle('flip');
+el('cdOk').onclick=()=>{if(!kCard)return;
+  kS.cards[kCard.t]=Math.min(3,(kS.cards[kCard.t]||1)+1);kSave();kCardShow()};
+el('cdBad').onclick=()=>{if(!kCard)return;kS.cards[kCard.t]=1;kSave();kCardShow()};
+el('cdX').onclick=()=>el('cardsM').classList.remove('on');
+el('cardsM').onclick=e=>{if(e.target.id==='cardsM')el('cardsM').classList.remove('on')};
+el('bCards').onclick=()=>{el('cardsM').classList.add('on');kCardShow()};
+
+/* ══════════════ eksport notatek ══════════════ */
+function kExport(){
+  const L=[];
+  L.push('# Antyk — notatki z kursu','');
+  L.push('Wyeksportowano: '+new Date().toLocaleDateString('pl-PL'),'');
+  const n=MOD.filter(m=>kS.done[m.id]).length;
+  L.push(`Ukończone moduły: ${n} z ${MOD.length}.`,'');
+  MOD.forEach(m=>{
+    const note=kS.notes[m.id], q=kS.quiz[m.id], ex=kS.ex[m.id];
+    if(!note&&!q&&!(ex&&ex.done))return;
+    L.push(`## ${m.n?m.n+'. ':''}${m.t}`,'');
+    if(q){const ok=m.quiz.filter((x,i)=>q[i]===x.c).length;
+      L.push(`- Quiz: ${ok} / ${m.quiz.length}`)}
+    if(ex&&ex.label)L.push(`- Ćwiczenie: ${ex.label}`);
+    if(note)L.push('','> '+note.replace(/\n/g,'\n> '),'');
+    L.push('');
+  });
+  const pal=(kS.ex.m15||{}).rooms||{};
+  if(Object.keys(pal).length){
+    L.push('## Pałac pamięci','');
+    K_ROOMS.forEach((r,i)=>{if(pal[i]&&pal[i].trim())L.push(`${i+1}. **${r[0]}** — ${pal[i]}`)});
+    L.push('');
+  }
+  if(Object.keys(kS.diag||{}).length){
+    L.push('## Diagnoza sprzed kursu','');
+    K_DIAG.forEach((d,i)=>{const p=kS.diag['q'+i];
+      if(p===undefined)return;
+      L.push(`**${d.q}**`,`- Twoja odpowiedź: ${d.o[p]}`,`- Poprawna: ${d.o[d.c]}`,'');
+    });
+  }
+  L.push('## Harmonogram powtórek','');
+  K_SCHED.forEach(s=>L.push(`- **${s[0]}** (${s[2]}) — ${s[1]}`));
+  const blob=new Blob([L.join('\n')],{type:'text/markdown;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob); a.download='antyk-notatki.md';
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},400);
+}
+el('bExport').onclick=kExport;
+
+/* ══════════════ wydruk całego kursu ══════════════ */
+const kPrintBox=document.createElement('div');
+kPrintBox.id='printAll'; document.body.appendChild(kPrintBox);
+el('bPrint').onclick=()=>{
+  kPrintBox.innerHTML='<h1 style="font-family:var(--disp)">Antyk — kurs</h1>'+MOD.map(m=>`
+    <section style="page-break-inside:avoid;margin-bottom:26px">
+      <h2>${m.n?m.n+'. ':''}${esc(m.t)} <span style="font-weight:400;font-size:.7em">${esc(m.when)}</span></h2>
+      ${m.lead}
+      ${m.works.length?'<h3>Dzieła i autorzy</h3><ul>'+m.works.map(x=>
+        `<li><b>${esc(x[0])}</b> — ${x[1]}</li>`).join('')+'</ul>':''}
+      ${m.terms.length?'<h3>Pojęcia</h3><ul>'+m.terms.map(x=>
+        `<li><b>${esc(x[0])}</b> — ${esc(x[1])}</li>`).join('')+'</ul>':''}
+      ${kS.notes[m.id]?'<h3>Twoja notatka</h3><p><i>'+esc(kS.notes[m.id])+'</i></p>':''}
+    </section>`).join('');
+  window.print();
+};
+
+/* ══════════════ miejsca kursu na mapie ══════════════ */
+const K_PLACES=[
+ ['Ur',46.10,30.96],['Babilon',44.42,32.54],['Niniwa',43.15,36.36],['Giza',31.13,29.98],
+ ['Teby egipskie',32.64,25.72],['Jerozolima',35.23,31.78],['Tyr',35.20,33.27],
+ ['Troja',26.24,39.96],['Mykeny',22.76,37.73],['Knossos',25.16,35.30],
+ ['Ateny',23.73,37.98],['Sparta',22.43,37.08],['Delfy',22.50,38.48],['Olimpia',21.63,37.64],
+ ['Efez',27.34,37.95],['Milet',27.28,37.53],['Persepolis',52.89,29.94],
+ ['Aleksandria',29.92,31.20],['Rzym',12.50,41.90],['Kartagina',10.32,36.85],
+ ['Akcjum',20.75,38.94],['Konstantynopol',28.98,41.01]
+];
+{
+  const g=document.createElementNS(NS,'g');
+  g.id='gPlaces'; g.style.display='none';
+  let s='';
+  K_PLACES.forEach(p=>{
+    const q=pj(p[1],p[2]);
+    s+=`<g><circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="3.4" fill="none"
+          stroke="#ffd894" stroke-width="1.6" vector-effect="non-scaling-stroke"/>
+        <circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="1" fill="#ffd894"/>
+        <text x="${(q[0]+5.5).toFixed(1)}" y="${(q[1]+2.4).toFixed(1)}" font-family="EB Garamond,serif"
+          font-size="9" fill="#ffd894" paint-order="stroke" stroke="#0b1118" stroke-width="2.6"
+          vector-effect="non-scaling-stroke">${esc(p[0])}</text></g>`;
+  });
+  g.innerHTML=s;
+  svg.appendChild(g);
+  el('lPlaces').onchange=e=>{g.style.display=e.target.checked?'':'none'};
+}
+
+/* ══════════════ klawiatura ══════════════ */
+addEventListener('keydown',e=>{
+  if(e.target.matches('input,textarea'))return;
+  if(el('cardsM').classList.contains('on')){
+    if(e.key==='Escape'){el('cardsM').classList.remove('on');e.preventDefault()}
+    else if(e.key===' '){el('cdC').classList.toggle('flip');e.preventDefault()}
+    else if(e.key==='1'){el('cdBad').click();e.preventDefault()}
+    else if(e.key==='2'){el('cdOk').click();e.preventDefault()}
+    return;
+  }
+  const k=e.key.toLowerCase();
+  if(k==='m'){kMode(document.body.dataset.mode==='kurs'?'atlas':'kurs');e.preventDefault();return}
+  if(document.body.dataset.mode!=='kurs')return;
+  if(k==='f'){el('bCards').click();e.preventDefault()}
+  else if(e.key==='ArrowRight'){kGo(kS.mod+1,true);e.preventDefault()}
+  else if(e.key==='ArrowLeft'){kGo(kS.mod-1,true);e.preventDefault()}
+  else if(e.key===' '){el('cDone').click();e.preventDefault()}
+  else if(e.key==='+'||e.key==='='){kZoom(.7);e.preventDefault()}
+  else if(e.key==='-'){kZoom(1.42);e.preventDefault()}
+  else if(e.key==='Home'){kGo(0,true);e.preventDefault()}
+  else if(e.key==='End'){kGo(MOD.length-1,true);e.preventDefault()}
+},true);
+
+/* ══════════════ narzędzia sceny w trybie kursu ══════════════ */
+el('bMode').onclick=()=>kMode(document.body.dataset.mode==='kurs'?'atlas':'kurs');
+['bZin','bZout','bAll'].forEach(id=>{
+  const prev=el(id).onclick;
+  el(id).onclick=e=>{
+    if(document.body.dataset.mode==='kurs'){
+      if(id==='bZin')kZoom(.62); else if(id==='bZout')kZoom(1.6); else kFit();
+      return;
+    }
+    prev.call(el(id),e);
+  };
+});
+
+/* ══════════════ start ══════════════ */
+kYearOut=el('hRange');   /* nagłówek pokazuje widoczny wycinek osi, na żywo */
+kMode('kurs');
+kGo(kS.mod||0,false);
+
 </script>
 </body>
 </html>
